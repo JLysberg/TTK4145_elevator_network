@@ -1,6 +1,7 @@
 package cost_estimator
 
 import (
+	//"fmt"
 	"time"
 
 	"internal/monitor"
@@ -17,6 +18,9 @@ func UpdateQueue( /*receiver <-chan int*/ ) {
 		for floor, floorState := range monitor.OrderMatrix {
 			if floorState.Up || floorState.Down || floorState.Cab {
 				OrderQueue[floor] = true
+			}
+			if floorState.Clear {
+				
 			}
 		}
 	}

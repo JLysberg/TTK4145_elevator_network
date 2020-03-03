@@ -1,6 +1,7 @@
 package monitor
 
 import (
+	//"fmt"
 	"time"
 
 	"pkg/elevio"
@@ -23,22 +24,22 @@ const (
 )
 
 type ElevState struct {
-	Floor     int
-	Operation ElevOperation
+	Floor    int
+	Dir      elevio.MotorDirection
+	DoorOpen bool
 }
 
 const (
 	MFloors = 4
 	NElevs  = 1
 
-	_Button_UpdateRate = 20 * time.Millisecond
+	_Generic_UpdateRate = 20 * time.Millisecond
 )
 
 /************************************************************
  * Local elevator information
  ************************************************************/
-var elev_floor int
-var elev_id = 0 //Static ID for single operation
+var Elev_id = 0 //Static ID for single operation
 
 /************************************************************
  * Global network information
@@ -49,12 +50,12 @@ var elev_id = 0 //Static ID for single operation
 	Reads column for column. That is, every FloorState for
 	every floor of E1 first, then E2 etc.
 
-	E.g.: E3, F2 is indexed as: OrderMatrix[(3-1)*NElevs + (2-1)]
+	E.g.: E2, F2 is indexed as: OrderMatrix[2*NElevs + 2]
 
-			E1	E2	..	EN
+			E0	E1	..	EN
 		[
+	F0		FS	FS	..	FS
 	F1		FS	FS	..	FS
-	F2		FS	FS	..	FS
 	..		..	..		..
 	FM		FS	FS	..	FS
 		]
@@ -63,7 +64,7 @@ var elev_id = 0 //Static ID for single operation
 	1 x N vector containing every ElevState of every elevator
 	on the network.
 
-			E1	E1	..	EN
+			E0	E1	..	EN
 		[
 			ES	ES	..	ES
 		]
@@ -71,33 +72,52 @@ var elev_id = 0 //Static ID for single operation
 var OrderMatrix [MFloors * NElevs]FloorState
 var ElevStates [NElevs]ElevState
 
-func AddLocalOrder(buttonEvent elevio.ButtonEvent) {
-	switch buttonEvent.Button {
-	case elevio.BT_HallUp:
-		OrderMatrix[(elev_id-1)*NElevs+(buttonEvent.Floor-1)].Up = true
-	case elevio.BT_HallDown:
-		OrderMatrix[(elev_id-1)*NElevs+(buttonEvent.Floor-1)].Down = true
-	case elevio.BT_Cab:
-		OrderMatrix[(elev_id-1)*NElevs+(buttonEvent.Floor-1)].Cab = true
-	}
+func RemoveGlobalOrder() {
+	OrderMatrix[Elev_id*NElevs+ElevStates[Elev_id].Floor].Clear = true
+	time.Sleep(500 * time.Millisecond)
+	OrderMatrix[Elev_id*NElevs+ElevStates[Elev_id].Floor].Clear = false
 }
 
-func UpdateButtonLights() {
+func PollOrders(sender <-chan elevio.ButtonEvent) {
 	for {
-		time.Sleep(_Button_UpdateRate)
-		for index, floorState := range OrderMatrix {
-			var floor = index / NElevs
-			if floorState.Up {
-				elevio.SetButtonLamp(elevio.BT_HallUp, floor+1, true)
+		time.Sleep(_Generic_UpdateRate)
+		select {
+		case b := <-sender:
+			switch b.Button {
+			case elevio.BT_HallUp:
+				OrderMatrix[Elev_id*NElevs+b.Floor].Up = true
+			case elevio.BT_HallDown:
+				OrderMatrix[Elev_id*NElevs+b.Floor].Down = true
+			case elevio.BT_Cab:
+				OrderMatrix[Elev_id*NElevs+b.Floor].Cab = true
 			}
-			if floorState.Down {
-				elevio.SetButtonLamp(elevio.BT_HallDown, floor+1, true)
-			}
-			if floorState.Cab && floor == elev_id {
-				elevio.SetButtonLamp(elevio.BT_Cab, floor+1, true)
+		
+		default:
+			for index, floorState := range OrderMatrix {
+				var floor = index % MFloors
+				var id = 0 //Temporary solution for single elevator operation
+				if floorState.Up {
+					elevio.SetButtonLamp(elevio.BT_HallUp, floor, true)
+				}
+				if floorState.Down {
+					elevio.SetButtonLamp(elevio.BT_HallDown, floor, true)
+				}
+				if floorState.Cab && id == Elev_id {
+					elevio.SetButtonLamp(elevio.BT_Cab, floor, true)
+				}
+				if floorState.Clear {
+					elevio.SetButtonLamp(elevio.BT_HallUp, floor, false)
+					elevio.SetButtonLamp(elevio.BT_HallDown, floor, false)
+					elevio.SetButtonLamp(elevio.BT_Cab, floor, false)
+					
+					for elev := 0; elev < NElevs; elev++ {
+						OrderMatrix[elev*NElevs + floor].Up = false
+						OrderMatrix[elev*NElevs + floor].Down = false
+					}
+					OrderMatrix[Elev_id*NElevs + floor].Cab = false
+				}
 			}
 		}
 	}
+	//TODO: Implement functionality to poll the network for new orders
 }
-
-//TODO: Implement function that can poll the network for new orders

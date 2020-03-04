@@ -4,8 +4,8 @@ import (
 	//"fmt"
 	"time"
 
-	. "internal/common/types"
-	"internal/common/config"
+	//. "../common/types"
+	"../common/config"
 )
 
 const _Queue_UpdateRate = 20 * time.Millisecond
@@ -13,7 +13,7 @@ const _Queue_UpdateRate = 20 * time.Millisecond
 var OrderQueue [config.MFloors]bool
 
 //TODO: Improve function to calculate queue with multiple elevators
-func UpdateQueue( newOrder <-chan int ) {
+/*func UpdateQueue( newOrder <-chan bool ) {
 	for {
 		time.Sleep(_Queue_UpdateRate)
 		for floor, floorState := range monitor.OrderMatrix {
@@ -22,8 +22,8 @@ func UpdateQueue( newOrder <-chan int ) {
 				newOrder <- true
 			}
 			if floorState.Clear {
-				
+
 			}
 		}
 	}
-}
+}*/

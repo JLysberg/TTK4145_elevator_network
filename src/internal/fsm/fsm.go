@@ -1,44 +1,123 @@
 package fsm
 
 import (
-	//"fmt"
+	"fmt"
+	"time"
 
-	. "internal/common/types"
-	"internal/common/config"
-	"internal/cost_estimator"
-	"internal/monitor"
+	"../common/config"
+	. "../common/types"
 
-	"pkg/elevio"
+	/*"../cost_estimator"
+	"../monitor"*/
+
+	"../../pkg/elevio"
 )
 
 type StateMachineChannels struct {
-	buttonPress       chan ButtonEvent
-	floorSensor       chan int
-	obstructionSwitch chan bool
-	newOrder 		  chan bool
+	ButtonPress       chan ButtonEvent
+	FloorSensor       chan int
+	ObstructionSwitch chan bool
+	NewOrder          chan bool
+}
+
+var Node = NodeInfo{
+	ID:    "hello",
+	State: ES_Init,
+	Dir:   MD_Stop,
+	Floor: 2,
+	Queue: make([]bool, config.MFloors),
+}
+
+var Global = GlobalInfo{
+	LocalID: "hello",
+	Nodes:   make(map[string]NodeInfo),
+	Orders:  make([][]FloorState, config.NElevs),
+}
+
+func dummyQueue(ch chan<- bool) {
+	time.Sleep(5000 * time.Millisecond)
+	Node.Queue[2] = true
+	ch <- true
+}
+
+func ordersInFront() bool {
+	if Node.Dir == MD_Stop {
+		return false
+	}
+
+	for floor, order := range Node.Queue {
+		if order {
+			diff := Node.Floor - floor
+			switch Node.Dir {
+			case MD_Up:
+				ret := diff <= 0
+			case MD_Down:
+				ret := diff <= 0
+			}
+		}
+	}
+	return false
+}
+
+func calculateDirection() MotorDirection {
+	var Dir MotorDirection
+	for floor, order := range Node.Queue {
+		if order {
+			switch Node.Dir {
+			case MD_Up:
+				switch diff := Node.Floor - floor; {
+				case diff > 0:
+
+				case diff < 0:
+				case diff == 0:
+					Dir = MD_Stop
+					break Loop
+				}
+			case MD_Down:
+				switch diff := Node.Floor - floor; {
+				case diff > 0:
+				case diff < 0:
+				case diff == 0:
+					Dir = MD_Stop
+					break Loop
+				}
+			case MD_Stop:
+				switch diff := Node.Floor - floor; {
+				case diff > 0:
+				case diff < 0:
+				case diff == 0:
+					Dir = MD_Stop
+					break Loop
+				}
+			}
+		}
+	}
+	return Dir
 }
 
 func Run(ch StateMachineChannels) {
 	elevio.Init("localhost:15657", config.MFloors)
 
-	var state = eS_Init
+	//var state = ES_Init
+
+	for i := range Global.Orders {
+		Global.Orders[i] = make([]FloorState, config.MFloors)
+	}
+	go dummyQueue(ch.NewOrder)
+
 	elevio.SetMotorDirection(MD_Down)
+	<-ch.FloorSensor
+	elevio.SetMotorDirection(MD_Stop)
+
 	for {
-
 		select {
-		case floor := <-ch.floorSensor:
-			//Do something
-		case <-ch.newOrder:
+		case <-ch.NewOrder:
 			//TODO: Add order to OrderMatrix
+			fmt.Println("Hello")
 
-		/* State machine */
+		/* OLD State machine */
 		default:
 			/*switch state {
-
-
-
-
-				
 			case eS_Init:
 				if f.floorIndicator {
 					elevio.SetMotorDirection(elevio.MD_Stop)

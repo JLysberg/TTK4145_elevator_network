@@ -3,11 +3,11 @@ package monitor
 import (
 	//"fmt"
 	"time"
+	/*"encoding/json"
 
-	. "internal/common/types"
-	"internal/common/config"
-	"encoding/json"
-	"pkg/elevio"
+	. "../common/types"
+	"../common/config"
+	"../../pkg/elevio"*/
 )
 
 const (
@@ -17,7 +17,7 @@ const (
 //Make a struct with what needs to be sent; ElevStates and OrderMatrix (I called it ElevStates_OrderMatrix here)
 //Make a function that Marshals and transmits the messages through the network
 
-IncomingMsg := make(chan ElevStates_OrderMatrix)
+/*IncomingMsg := make(chan ElevStates_OrderMatrix)
 go bcast.Receiver(0, IncomingMsg)
 
 func PollOrdersNetwork(packet <-chan IncomingMsg) {
@@ -50,3 +50,4 @@ func PollOrdersNetwork(packet <-chan IncomingMsg) {
 		}
 	}
 }
+*/

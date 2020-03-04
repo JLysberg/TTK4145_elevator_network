@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	. "internal/common/types"
+	. "../../internal/common/types"
 )
 
 const _pollRate = 20 * time.Millisecond
@@ -167,4 +167,18 @@ func toBool(a byte) bool {
 		b = true
 	}
 	return b
+}
+
+// Initially private
+func GetFloor() int {
+	_mtx.Lock()
+	defer _mtx.Unlock()
+	_conn.Write([]byte{7, 0, 0, 0})
+	var buf [4]byte
+	_conn.Read(buf[:])
+	if buf[1] != 0 {
+		return int(buf[2])
+	} else {
+		return -1
+	}
 }

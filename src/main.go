@@ -1,26 +1,29 @@
 package main
 
 import (
-	"internal/fsm"
-	. "internal/common/types"
+	"./pkg/elevio"
+
+	"./internal/fsm"
+	. "./internal/common/types"
+	/*"./internal/cost_estimator"
+	"./internal/monitor"*/
 )
 
 func main() {
 	ch := fsm.StateMachineChannels{
-		buttonPress: make(chan ButtonEvent)
-		newOrder: make(chan bool)
-		floorSensor: make(chan int)
-		obstructionSwitch: make(chan bool)
-		
+		ButtonPress: make(chan ButtonEvent),
+		NewOrder: make(chan bool),
+		FloorSensor: make(chan int),
+		ObstructionSwitch: make(chan bool),
 	}
 
-	go cost_estimator.UpdateQueue()
+	//go cost_estimator.UpdateQueue()
 
-	go monitor.PollOrders(ch.buttonPress)
+	//go monitor.PollOrders(ch.ButtonPress)
 
-	go elevio.PollButtons(ch.buttonPress)
-	go elevio.PollFloorSensor(ch.floorSensor)
-	go elevio.PollObstructionSwitch(ch.obstructionSwitch)
+	go elevio.PollButtons(ch.ButtonPress)
+	go elevio.PollFloorSensor(ch.FloorSensor)
+	go elevio.PollObstructionSwitch(ch.ObstructionSwitch)
 
 	fsm.Run(ch)
 }

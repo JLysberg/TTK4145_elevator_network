@@ -24,10 +24,10 @@ type ButtonEvent struct {
 type ElevatorState int
 
 const (
-	eS_Init ElevatorState = 0
-	eS_Idle               = 1
-	eS_Run                = 2
-	eS_Stop               = 3
+	ES_Init ElevatorState = 0
+	ES_Idle               = 1
+	ES_Run                = 2
+	ES_Stop               = 3
 )
 
 type FloorState struct {

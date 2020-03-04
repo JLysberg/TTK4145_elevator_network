@@ -16,24 +16,11 @@ type FloorState struct {
 
 type ElevOperation int
 
-const (
-	EO_Up       ElevOperation = 1
-	EO_Down                   = -1
-	EO_Idle                   = 0
-	EO_OpenDoor               = 2
+	"pkg/elevio"
 )
 
-type ElevState struct {
-	Floor    int
-	Dir      elevio.MotorDirection
-	DoorOpen bool
-}
-
 const (
-	MFloors = 4
-	NElevs  = 1
-
-	_Generic_UpdateRate = 20 * time.Millisecond
+	_UpdateRate = 20 * time.Millisecond
 )
 
 /************************************************************

@@ -11,6 +11,7 @@ func main() {
 		newOrder: make(chan bool)
 		floorSensor: make(chan int)
 		obstructionSwitch: make(chan bool)
+		packetReceiver: make(chan GlobalInfo)
 		
 	}
 

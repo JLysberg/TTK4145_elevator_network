@@ -38,11 +38,12 @@ type FloorState struct {
 }
 
 type NodeInfo struct {
-	ID    string
-	State ElevatorState
-	Dir   MotorDirection
-	Floor int
-	Queue []bool
+	ID          string
+	State       ElevatorState
+	Dir         MotorDirection
+	Floor       int
+	Queue       []bool
+	OrdersLocal [][]FloorState
 }
 
 type GlobalInfo struct {

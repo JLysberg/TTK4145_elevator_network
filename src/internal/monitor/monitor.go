@@ -37,9 +37,10 @@ var Elev_id = 0 //Static ID for single operation
 	Reads column for column. That is, every FloorState for
 	every floor of E1 first, then E2 etc.
 
+
 	E.g.: E2, F2 is indexed as: OrderMatrix[2*NElevs + 2]
 
-			E0	E1	..	EN
+			E1	E2  ..	EN
 		[
 	F0		FS	FS	..	FS
 	F1		FS	FS	..	FS
@@ -65,84 +66,109 @@ func RemoveGlobalOrder() {
 	OrderMatrix[Elev_id*NElevs+ElevStates[Elev_id].Floor].Clear = false
 }
 
-func PollOrders(sender <-chan elevio.ButtonEvent) {
-	for {
-		time.Sleep(_Generic_UpdateRate)
-		select {
-		case b := <-sender:
-			switch b.Button {
-			case elevio.BT_HallUp:
-				OrderMatrix[Elev_id*NElevs+b.Floor].Up = true
-			case elevio.BT_HallDown:
-				OrderMatrix[Elev_id*NElevs+b.Floor].Down = true
-			case elevio.BT_Cab:
-				OrderMatrix[Elev_id*NElevs+b.Floor].Cab = true
+
+func KingOfOrders(btnsPressedLocal chan buttonPress, newPackets chan packetReceiver, id string, OrdersLocal [][]FloorState){
+
+	select{
+		case btn := <- btnsPressedLocal
+			switch btn.Button {
+				case 0: //HallUp
+					OrdersLocal[btn.Floor][id].Up = true
+				case 1: //HallDown
+					OrdersLocal[btn.Floor][id].Down = true
+				case 2: //Cab
+					OrdersLocal[btn.Floor][id].Cab = true
 			}
-		
-		default:
-			for index, floorState := range OrderMatrix {
-				var floor = index % MFloors
-				var id = 0 //Temporary solution for single elevator operation
-				if floorState.Up {
-					elevio.SetButtonLamp(elevio.BT_HallUp, floor, true)
-				}
-				if floorState.Down {
-					elevio.SetButtonLamp(elevio.BT_HallDown, floor, true)
-				}
-				if floorState.Cab && id == Elev_id {
-					elevio.SetButtonLamp(elevio.BT_Cab, floor, true)
-				}
-				if floorState.Clear {
-					elevio.SetButtonLamp(elevio.BT_HallUp, floor, false)
-					elevio.SetButtonLamp(elevio.BT_HallDown, floor, false)
-					elevio.SetButtonLamp(elevio.BT_Cab, floor, false)
-					
-					for elev := 0; elev < NElevs; elev++ {
-						OrderMatrix[elev*NElevs + floor].Up = false
-						OrderMatrix[elev*NElevs + floor].Down = false
+	
+		case packet := <- newPackets
+			var msg GlobalInfo
+			err := json.Unmarshal(packet, &msg)
+			if err != nil {
+				fmt.Println("error with unmarshaling message:", err)
+			}
+
+			if msg.Orders != OrdersLocal{  //if GlobalInfo order matrix != Local order matrix:
+				for floors := 0; floors < MFloors; i++ {
+					for key, value := range msg.Nodes {
+						
+						if msg.Orders[floors][key].Clear
+							//VENT I 2 SEKUNDER FØR VI SETTER ORDREN TIL 0
+							OrdersLocal[floors][key].Up = false
+							OrdersLocal[floors][key].Down = false
+							OrdersLocal[floors][key].Cab = false
+										
+						}
+						if msg.Orders[floors][key].Cab{
+							OrdersLocal[floors][key].Cab = true				
+						}	
+							
+						if msg.Orders[floors][key].Up{ 
+							OrdersLocal[floors][key].Up = true
+						}
+				
+						if msg.Orders[floors][key].Down{
+							OrderMatrix[floors][key].Down = true
+						}
 					}
-					OrderMatrix[Elev_id*NElevs + floor].Cab = false
 				}
 			}
 		}
+		//HER MÅ VI:
+		//lag en ticker før å send te FSM!!
+		//default 
+
+		
+		
+		//kjør kostfunksjon på LOKAL ordrematrise
+		//send inn queue te fsm
+
 	}
-	//TODO: Implement functionality to poll the network for new orders
+
+	//HAN E GLOBAL  -  BEHØV IKJE Å SEND
+	//Send ut ny, oppdatert ordrematrise tebake te network
+	//send den tel func lightSetter()
 }
 
 
-//Make a struct with what needs to be sent; ElevStates and OrderMatrix (I called it ElevStates_OrderMatrix here)
-//Make a function that Marshals and transmits the messages through the network
 
-IncomingMsg := make(chan ElevStates_OrderMatrix)
-go bcast.Receiver(0, IncomingMsg)
 
-func PollOrdersNetwork(packet <-chan IncomingMsg) {
-	var msg ElevStates_OrderMatrix
-	err := json.Unmarshal(packet, &msg)
-	if err != nil {
-		fmt.Println("error with unmarshaling message:", err)
+func lightSetter(newPackets chan packetReceiver, id string, sensor chan floorsensor){
+	select{
+		case b := <- sensor
+			SetFloorIndicator(b)
 	}
 
-	for floors := 0; floors < MFloors; i++ {
-		for elevs := 0; elevs < NElevs; j++ {
-			if elevs == Elev_id && msg.OrderMatrix[floors][elevs].Clear{
+	for floors := 0; floors < MFloors; floors++ {
+		for elevs := range OrdersLocal[0] { //How to iterate over strings as indexes??
+			if OrdersLocal[floors][elevs].Cab && elevs == id{
+				elevio.SetButtonLamp(2, floors, true)
+			}
+			if OrdersLocal[floors][elevs].Up{
+				elevio.SetButtonLamp(0, floors, true)
+			}
+			if OrdersLocal[floors][elevs].Down{
+				elevio.SetButtonLamp(1, floors, true)
+			}
+
+			if OrdersLocal[floors][elevs].Clear{
+				elevio.SetButtonLamp(0, floors, false)
+				elevio.SetButtonLamp(1, floors, false)
+				if elevs == id{
+					elevio.SetButtonLamp(2, floors, false)
+				}
+			}
+
+		//for floors
+			//for elevators
+				//if cab button e blitt trykt OG det e våres egen heis (ikje ta andres cab lys)
+					//sett lyse høyt hos mæ sjøl
 			
-			OrderMatrix[floors][elevs].Up = false
-			OrderMatrix[floors][elevs].Down = false
-			OrderMatrix[floors][elevs].Cab = false
-							
-			}
-			if elevs == Elev_id && msg.OrderMatrix[floors][elevs].Cab{
-				OrderMatrix[floors][elevs].Cab = true				
-			}	
-				
-			if elevs == Elev_id && msg.OrderMatrix[floors][elevs].Up{ 
-				OrderMatrix[floors][elevs].Up = true
-			}
-	
-			if elevs == Elev_id && msg.OrderMatrix[floors][elevs].Down) {
-				OrderMatrix[floors][elevs].Down = true
-			}
+				//if hall button e blitt trykt (hvis en ener e blitt satt hos up/down på en rad)
+					//sett lyse høyt i min etasje der
+
+				//if clear nån steds
+				//skru av mitt lys i den etasjn
+
 		}
 	}
 }

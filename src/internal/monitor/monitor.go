@@ -92,8 +92,8 @@ func KingOfOrders(btnsPressedLocal chan buttonPress, newPackets chan packetRecei
 					for key, value := range msg.Nodes {
 						
 						if msg.Orders[floors][key].Clear
-							//VENT I 2 SEKUNDER FØR VI SETTER ORDREN TIL 0
-							OrdersLocal[floors][key].Up = false
+							//VENT I 2 SEKUNDER FØR VI CLEARER ORDREN!
+							OrdersLocal[floors][value.ID].Up = false
 							OrdersLocal[floors][key].Down = false
 							OrdersLocal[floors][key].Cab = false
 										
@@ -107,21 +107,37 @@ func KingOfOrders(btnsPressedLocal chan buttonPress, newPackets chan packetRecei
 						}
 				
 						if msg.Orders[floors][key].Down{
-							OrderMatrix[floors][key].Down = true
+							OrdersLocal[floors][key].Down = true
 						}
 					}
 				}
 			}
 		}
-		//HER MÅ VI:
+	}
+	//HER MÅ VI:
+
+	//kjør kostfunksjon på LOKAL ordrematrise
+	//send inn queue te fsm:
 		//lag en ticker før å send te FSM!!
-		//default 
+	//default 
+	floordifference := MFloors
 
-		
-		
-		//kjør kostfunksjon på LOKAL ordrematrise
-		//send inn queue te fsm
 
+	for floor := 0; floor < MFloors; floor++ {
+		for key, value := range msg.Nodes{ //key: IP	 value: NodeInfo struct
+			
+			//if det e nån som ikje e på nettverke:
+			if OrdersLocal[floor][value.ID].Down{
+				if value.Floor - 
+			}
+			if OrdersLocal[floor][value.ID].Up{
+				if value.Floor - 
+			}
+			if OrdersLocal[floor][value.ID].Cab{ //Vårres heis har en cab order -> den må tas
+				
+				if value.Floor - 
+			} 
+		}
 	}
 
 	//HAN E GLOBAL  -  BEHØV IKJE Å SEND
@@ -132,29 +148,36 @@ func KingOfOrders(btnsPressedLocal chan buttonPress, newPackets chan packetRecei
 
 
 
-func lightSetter(newPackets chan packetReceiver, id string, sensor chan floorsensor){
+func lightSetter(id string, sensor chan floorsensor){
 	select{
-		case b := <- sensor
-			SetFloorIndicator(b)
+		case thisfloor := <- sensor
+			SetFloorIndicator(thisfloor)
+			for floor := 0; floor < MFloors; floor++ {
+				if floor != thisfloor{
+					//Skru av floorindicator på alle andre etasja
+					//SetFloorIndicator(thisfloor)
+				}
+			}
+		}
 	}
 
-	for floors := 0; floors < MFloors; floors++ {
-		for elevs := range OrdersLocal[0] { //How to iterate over strings as indexes??
-			if OrdersLocal[floors][elevs].Cab && elevs == id{
-				elevio.SetButtonLamp(2, floors, true)
+	for floor := 0; floor < MFloors; floor++ {
+		for elev := range OrdersLocal[floor] {
+			if OrdersLocal[floor][elev].Cab && elev == id{
+				elevio.SetButtonLamp(2, floor, true)
 			}
-			if OrdersLocal[floors][elevs].Up{
-				elevio.SetButtonLamp(0, floors, true)
+			if OrdersLocal[floors][elev].Up{
+				elevio.SetButtonLamp(0, floor, true)
 			}
-			if OrdersLocal[floors][elevs].Down{
-				elevio.SetButtonLamp(1, floors, true)
+			if OrdersLocal[floors][elev].Down{
+				elevio.SetButtonLamp(1, floor, true)
 			}
 
-			if OrdersLocal[floors][elevs].Clear{
-				elevio.SetButtonLamp(0, floors, false)
-				elevio.SetButtonLamp(1, floors, false)
+			if OrdersLocal[floors][elev].Clear{
+				elevio.SetButtonLamp(0, floor, false)
+				elevio.SetButtonLamp(1, floor, false)
 				if elevs == id{
-					elevio.SetButtonLamp(2, floors, false)
+					elevio.SetButtonLamp(2, floor, false)
 				}
 			}
 

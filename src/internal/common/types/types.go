@@ -38,7 +38,8 @@ type FloorState struct {
 }
 
 type NodeInfo struct {
-	ID          string
+	IP          string
+	id          int
 	State       ElevatorState
 	Dir         MotorDirection
 	Floor       int
@@ -47,7 +48,7 @@ type NodeInfo struct {
 }
 
 type GlobalInfo struct {
-	LocalID string
-	Nodes   map[string]NodeInfo
+	LocalIP string
+	Nodes   map[string]NodeInfo //key: IP-addesse (ID in NodeInfo)	value: NodeInfo
 	Orders  [][]FloorState
 }

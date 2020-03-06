@@ -38,7 +38,7 @@ type FloorState struct {
 }
 
 type NodeInfo struct {
-	ID    string
+	//ID    string
 	State ElevatorState
 	Dir   MotorDirection
 	Floor int
@@ -47,6 +47,6 @@ type NodeInfo struct {
 
 type GlobalInfo struct {
 	LocalID string
-	Nodes   map[string]NodeInfo
+	Nodes   map[string]NodeInfo //Could possibly be exchanged with an array
 	Orders  [][]FloorState
 }

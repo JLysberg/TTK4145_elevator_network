@@ -1,6 +1,8 @@
 package main
 
 import (
+	"flag"
+	"strconv"
 	"./pkg/elevio"
 
 	"./internal/fsm"
@@ -10,6 +12,16 @@ import (
 )
 
 func main() {
+	var (
+		id    string
+		ID    int
+	)
+
+	flag.StringVar(&id, "id", "0", "id of this elevator")
+	//flag.IntVar(&ID, "id", 0, "id of this elevator")
+	flag.Parse()
+	ID, _ := strconv.Atoi(id)
+
 	ch := fsm.StateMachineChannels{
 		ButtonPress: make(chan ButtonEvent),
 		NewOrder: make(chan bool),

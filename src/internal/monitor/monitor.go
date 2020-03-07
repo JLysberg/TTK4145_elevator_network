@@ -116,6 +116,7 @@ func KingOfOrders(btnsPressedLocal chan buttonPress, newPackets chan packetRecei
 		}
 	}
 
+	
 	// ---- Cost Estimator ---- //
 
 	floordifferenceUP := MFloors

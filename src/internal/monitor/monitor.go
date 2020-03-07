@@ -67,7 +67,8 @@ func RemoveGlobalOrder() {
 }
 
 
-func KingOfOrders(btnsPressedLocal chan buttonPress, newPackets chan packetReceiver, id string, OrdersLocal [][]FloorState){
+func KingOfOrders(btnsPressedLocal chan buttonPress, newPackets chan packetReceiver, 
+	id int, OrdersLocal [][]FloorState, FSMQueue []bool){
 
 	select{
 		case btn := <- btnsPressedLocal
@@ -84,29 +85,29 @@ func KingOfOrders(btnsPressedLocal chan buttonPress, newPackets chan packetRecei
 			var msg GlobalInfo
 			err := json.Unmarshal(packet, &msg)
 			if err != nil {
-				fmt.Println("error with unmarshaling message:", err)
+				fmt.Println("Error with unmarshaling message:", err)
 			}
 
-			if msg.Orders != OrdersLocal{  //if GlobalInfo order matrix != Local order matrix:
-				for floors := 0; floors < MFloors; i++ {
-					for key, value := range msg.Nodes {
+			if msg.Orders != OrdersLocal{
+				for floors := 0; floors < MFloors; floors++ {
+					for elevs := 0; elevs < NElevs; elevs++
 						
-						if msg.Orders[floors][key].Clear
-							//VENT I 2 SEKUNDER FØR VI CLEARER ORDREN!
-							OrdersLocal[floors][value.ID].Up = false
-							OrdersLocal[floors][key].Down = false
-							OrdersLocal[floors][key].Cab = false
+						if msg.Orders[floors][elevs].Clear
+							//HER MÅ DET IMPLEMENTERES: En ticker som venter i f.eks. 2 sekunder før vi clearer
+							OrdersLocal[floors][elevs].Up = false
+							OrdersLocal[floors][elevs].Down = false
+							OrdersLocal[floors][elevs].Cab = false
 										
 						}
-						if msg.Orders[floors][key].Cab{
-							OrdersLocal[floors][key].Cab = true				
+						if msg.Orders[floors][elevs].Cab && elevs == id{
+							OrdersLocal[floors][elevs].Cab = true				
 						}	
 							
-						if msg.Orders[floors][key].Up{ 
-							OrdersLocal[floors][key].Up = true
+						if msg.Orders[floors][elevs].Up{ 
+							OrdersLocal[floors][elevs].Up = true
 						}
 				
-						if msg.Orders[floors][key].Down{
+						if msg.Orders[floors][elevs].Down{
 							OrdersLocal[floors][key].Down = true
 						}
 					}
@@ -114,35 +115,60 @@ func KingOfOrders(btnsPressedLocal chan buttonPress, newPackets chan packetRecei
 			}
 		}
 	}
-	//HER MÅ VI:
 
-	//kjør kostfunksjon på LOKAL ordrematrise
-	//send inn queue te fsm:
-		//lag en ticker før å send te FSM!!
-	//default 
-	floordifference := MFloors
+	// ---- Cost Estimator ---- //
+
+	floordifferenceUP := MFloors
+	floordifferenceDOWN := MFloors
+
+	bestchoiceDOWN := id
+	bestchoiceUP := id
+
+	temporderUP := 0
+	temporderDOWN := 0
 
 
 	for floor := 0; floor < MFloors; floor++ {
-		for key, value := range msg.Nodes{ //key: IP	 value: NodeInfo struct
-			
-			//if det e nån som ikje e på nettverke:
-			if OrdersLocal[floor][value.ID].Down{
-				if value.Floor - 
-			}
-			if OrdersLocal[floor][value.ID].Up{
-				if value.Floor - 
-			}
-			if OrdersLocal[floor][value.ID].Cab{ //Vårres heis har en cab order -> den må tas
+		for elev := 0; elev < NElevs; elev++ { 
+			for _, NodeInfo := range msg.Nodes {
 				
-				if value.Floor - 
+				//HER MÅ DET IMPLEMENTERES: Noe som sjekker bare heisene som er på nettverket.
+
+				if OrdersLocal[floor][elev].Down{
+					if (NodeInfo.Floor - floor) < floordifferenceDOWN{
+						floordifferenceDOWN = NodeInfo.Floor - floor
+						bestchoiceDOWN = elev
+						temporderDOWN = floor
+					} 
+				}
+				if OrdersLocal[floor][elev].Up{
+					if (NodeInfo.Floor - floor) < floordifferenceUP {
+						floordifferenceUP = NodeInfo.Floor - floor
+						bestchoiceUP = elev
+						temporderUP = floor
+					}
+				}
+				if OrdersLocal[floor][elev].Cab && elev == id{ //Vår heis har en cab order -> den må tas uansett
+					FSMQueue = append(FSMQueue, floor)
+				}
 			} 
+			floordifferenceUP, floordifferenceDOWN := MFloors, MFloors
+			
+			if bestchoiceUP == id{
+				FSMQueue = append(FSMQueue, temporderUP)
+			}
+			if bestchoiceDOWN == id{
+				FSMQueue = append(FSMQueue, temporderDOWN)
+			}
 		}
 	}
 
-	//HAN E GLOBAL  -  BEHØV IKJE Å SEND
-	//Send ut ny, oppdatert ordrematrise tebake te network
-	//send den tel func lightSetter()
+	//HER MÅ DET IMPLEMENTERES: En ticker for å sende FSMQueue til FSM. 
+		//F.eks.: //Lag en kanal som har typen FSMQueue, 
+				//FSM sjekker ved en select: case hvert 3. millisekund om noe nytt har kommet inn på kanalen  
+
+
+	//Denne nye ordrematrisa skal inn i lightSetter og til Network
 }
 
 
@@ -152,17 +178,13 @@ func lightSetter(id string, sensor chan floorsensor){
 	select{
 		case thisfloor := <- sensor
 			SetFloorIndicator(thisfloor)
-			for floor := 0; floor < MFloors; floor++ {
-				if floor != thisfloor{
-					//Skru av floorindicator på alle andre etasja
-					//SetFloorIndicator(thisfloor)
-				}
-			}
+
+			//HER MÅ DET IMPLEMENTERES: Funksjonalitet for å skru AV floorindicator på alle andre etasjer
 		}
 	}
 
 	for floor := 0; floor < MFloors; floor++ {
-		for elev := range OrdersLocal[floor] {
+		for elev := 0; elev < NElevs; elev++
 			if OrdersLocal[floor][elev].Cab && elev == id{
 				elevio.SetButtonLamp(2, floor, true)
 			}
@@ -180,18 +202,6 @@ func lightSetter(id string, sensor chan floorsensor){
 					elevio.SetButtonLamp(2, floor, false)
 				}
 			}
-
-		//for floors
-			//for elevators
-				//if cab button e blitt trykt OG det e våres egen heis (ikje ta andres cab lys)
-					//sett lyse høyt hos mæ sjøl
-			
-				//if hall button e blitt trykt (hvis en ener e blitt satt hos up/down på en rad)
-					//sett lyse høyt i min etasje der
-
-				//if clear nån steds
-				//skru av mitt lys i den etasjn
-
 		}
 	}
 }

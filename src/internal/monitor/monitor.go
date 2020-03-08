@@ -68,7 +68,7 @@ func RemoveGlobalOrder() {
 
 
 func KingOfOrders(btnsPressedLocal chan buttonPress, newPackets chan packetReceiver, 
-	id int, OrdersLocal [][]FloorState, FSMQueue []bool){
+	id int, LastDir int, OrdersLocal [][]FloorState, FSMQueue []bool){
 
 	select{
 		case btn := <- btnsPressedLocal
@@ -96,8 +96,7 @@ func KingOfOrders(btnsPressedLocal chan buttonPress, newPackets chan packetRecei
 							//HER MÅ DET IMPLEMENTERES: En ticker som venter i f.eks. 2 sekunder før vi clearer
 							OrdersLocal[floors][elevs].Up = false
 							OrdersLocal[floors][elevs].Down = false
-							OrdersLocal[floors][elevs].Cab = false
-										
+							OrdersLocal[floors][elevs].Cab = false			
 						}
 						if msg.Orders[floors][elevs].Cab && elevs == id{
 							OrdersLocal[floors][elevs].Cab = true				
@@ -125,41 +124,39 @@ func KingOfOrders(btnsPressedLocal chan buttonPress, newPackets chan packetRecei
 	bestchoiceDOWN := id
 	bestchoiceUP := id
 
-	temporderUP := 0
-	temporderDOWN := 0
-
-
 	for floor := 0; floor < MFloors; floor++ {
 		for elev := 0; elev < NElevs; elev++ { 
-			for _, NodeInfo := range msg.Nodes {
+			for _, NodeInfo := range GlobalInfo.Nodes {
 				
 				//HER MÅ DET IMPLEMENTERES: Noe som sjekker bare heisene som er på nettverket.
 
-				if OrdersLocal[floor][elev].Down{
-					if (NodeInfo.Floor - floor) < floordifferenceDOWN{
-						floordifferenceDOWN = NodeInfo.Floor - floor
-						bestchoiceDOWN = elev
-						temporderDOWN = floor
-					} 
-				}
-				if OrdersLocal[floor][elev].Up{
-					if (NodeInfo.Floor - floor) < floordifferenceUP {
-						floordifferenceUP = NodeInfo.Floor - floor
-						bestchoiceUP = elev
-						temporderUP = floor
-					}
-				}
-				if OrdersLocal[floor][elev].Cab && elev == id{ //Vår heis har en cab order -> den må tas uansett
+				if OrdersLocal[floor][elev].Cab && elev == id{
 					FSMQueue = append(FSMQueue, floor)
 				}
+
+				///Only take down-orders if we're going down/standing still
+				if OrdersLocal[floor][elev].Down && LastDir == -1{ 
+					if abs(NodeInfo.Floor - floor) < floordifferenceDOWN{
+						floordifferenceDOWN = NodeInfo.Floor - floor
+						bestchoiceDOWN = elev
+					} 
+				}
+
+				//Only take up-orders if we're going up/standing still
+				if OrdersLocal[floor][elev].Up && LastDir == 1{ 
+					if abs(NodeInfo.Floor - floor) < floordifferenceUP{
+						floordifferenceUP = NodeInfo.Floor - floor
+						bestchoiceUP = elev
+					}
+				}
 			} 
-			floordifferenceUP, floordifferenceDOWN := MFloors, MFloors
+			floordifferenceUP, floordifferenceDOWN = MFloors, MFloors
 			
 			if bestchoiceUP == id{
-				FSMQueue = append(FSMQueue, temporderUP)
+				FSMQueue = append(FSMQueue, floor)
 			}
 			if bestchoiceDOWN == id{
-				FSMQueue = append(FSMQueue, temporderDOWN)
+				FSMQueue = append(FSMQueue, floor)
 			}
 		}
 	}
@@ -205,4 +202,8 @@ func lightSetter(id string, sensor chan floorsensor){
 			}
 		}
 	}
+}
+
+func setLastDirection(i int){
+	last_dir = i
 }

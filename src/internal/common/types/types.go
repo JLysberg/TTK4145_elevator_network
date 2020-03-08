@@ -42,6 +42,7 @@ type NodeInfo struct {
 	id          int
 	State       ElevatorState
 	Dir         MotorDirection
+	LastDir     int
 	Floor       int
 	Queue       []bool
 	OrdersLocal [][]FloorState

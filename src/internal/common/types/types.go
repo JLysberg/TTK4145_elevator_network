@@ -49,7 +49,10 @@ type NodeInfo struct {
 }
 
 type GlobalInfo struct {
-	LocalIP string
-	Nodes   map[string]NodeInfo //key: IP-addesse (ID in NodeInfo)	value: NodeInfo
-	Orders  [][]FloorState
+	LocalID      int
+	LocalIP      string
+	OnlineList   [NElevs]bool
+	ElevLastSent [NElevs]int
+	Nodes        map[string]NodeInfo
+	Orders       [][]FloorState
 }

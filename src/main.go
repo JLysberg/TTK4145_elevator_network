@@ -1,21 +1,35 @@
 package main
 
 import (
-	// "./pkg/elevio"
+	"flag"
+	"fmt"
+	"strconv"
 
+	/* LAB setup */
+	// "./pkg/elevio"
 	// "./internal/fsm"
 	// . "./internal/common/types"
 	// /*"./internal/cost_estimator"
 	// "./internal/monitor"*/
-	"pkg/elevio"
 
+	/* GOPATH setup */
 	"internal/common/config"
 	. "internal/common/types"
 	"internal/fsm"
+	"pkg/elevio"
 )
 
 func main() {
 	elevio.Init("localhost:15657", config.MFloors)
+	var (
+		id    string
+	)
+
+	flag.StringVar(&id, "id", "0", "id of this elevator")
+	//flag.IntVar(&ID, "id", 0, "id of this elevator")
+	flag.Parse()
+	ID, _ := strconv.Atoi(id)
+	fmt.Print("ID is", ID)
 
 	ch := fsm.StateMachineChannels{
 		ButtonPress:       make(chan ButtonEvent),

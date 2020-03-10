@@ -1,5 +1,7 @@
 package types
 
+import "internal/common/config"
+
 type MotorDirection int
 
 const (
@@ -38,15 +40,19 @@ type FloorState struct {
 }
 
 type NodeInfo struct {
-	//ID    string
-	State ElevatorState
-	Dir   MotorDirection
-	Floor int
-	Queue []bool
+	State        ElevatorState
+	Dir          MotorDirection
+	LastDir      MotorDirection
+	Floor        int
+	Queue        [config.MFloors]bool
+	OnlineList   [config.NElevs]bool
+	ElevLastSent [config.NElevs]int
+	ID           int
+	OrdersLocal  [config.MFloors][config.NElevs]FloorState
 }
 
 type GlobalInfo struct {
-	LocalID string
-	Nodes   map[string]NodeInfo //Could possibly be exchanged with an array
-	Orders  [][]FloorState
+	Nodes  [config.NElevs]NodeInfo //Could possibly be exchanged with an array
+	Orders [config.MFloors][config.NElevs]FloorState
+	LocalID int
 }

@@ -6,8 +6,10 @@ import (
 	"sync"
 	"time"
 
+	/* LAB setup */
 	// . "../../internal/common/types"
 
+	/* GOPATH setup */
 	. "internal/common/types"
 )
 

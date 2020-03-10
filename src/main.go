@@ -36,6 +36,8 @@ func main() {
 		NewOrder:          make(chan bool),
 		FloorSensor:       make(chan int),
 		ObstructionSwitch: make(chan bool),
+		PacketReceiver: make(chan GlobalInfo),
+		
 	}
 
 	//go cost_estimator.UpdateQueue()

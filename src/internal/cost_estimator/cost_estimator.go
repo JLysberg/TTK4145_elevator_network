@@ -4,8 +4,10 @@ import (
 	//"fmt"
 	"time"
 
-	//. "../common/types"
-	"../common/config"
+	// . "../common/types"
+	// "../common/config"
+
+	"internal/common/config"
 )
 
 const _Queue_UpdateRate = 20 * time.Millisecond

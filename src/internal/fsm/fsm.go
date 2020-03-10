@@ -4,13 +4,15 @@ import (
 	"fmt"
 	"time"
 
-	"../common/config"
-	. "../common/types"
+	// "../common/config"
+	// . "../common/types"
+	// /*"../cost_estimator"
+	// "../monitor"*/
+	//"../../pkg/elevio"
+	"internal/common/config"
+	. "internal/common/types"
 
-	/*"../cost_estimator"
-	"../monitor"*/
-
-	"../../pkg/elevio"
+	"pkg/elevio"
 )
 
 type StateMachineChannels struct {
@@ -35,69 +37,61 @@ var Global = GlobalInfo{
 }
 
 func dummyQueue(ch chan<- bool) {
-	time.Sleep(5000 * time.Millisecond)
+	time.Sleep(4000 * time.Millisecond)
 	Node.Queue[2] = true
 	ch <- true
 }
 
-func ordersInFront() bool {
-	if Node.Dir == MD_Stop {
-		return false
-	}
-
+func orderInFront() MotorDirection {
+	fmt.Println("1")
 	for floor, order := range Node.Queue {
+		fmt.Println("2")
 		if order {
+			fmt.Println("3")
 			diff := Node.Floor - floor
 			switch Node.Dir {
 			case MD_Up:
-				ret := diff <= 0
+				if diff < 0 {
+					return MD_Up
+				}
 			case MD_Down:
-				ret := diff <= 0
+				if diff > 0 {
+					return MD_Down
+				}
+			case MD_Stop:
+				fmt.Println("5, n.floor:", Node.Floor, ", floor:", floor, "diff:", diff)
+				switch {
+				case diff < 0:
+					fmt.Println("6")
+					return MD_Up
+				case diff > 0:
+					fmt.Println("7")
+					return MD_Down
+				}
 			}
+		}
+	}
+	fmt.Println("4")
+	return MD_Stop
+}
+
+func orderAvailable() bool {
+	for _, order := range Node.Queue {
+		if order {
+			return true
 		}
 	}
 	return false
 }
 
 func calculateDirection() MotorDirection {
-	var Dir MotorDirection
-	for floor, order := range Node.Queue {
-		if order {
-			switch Node.Dir {
-			case MD_Up:
-				switch diff := Node.Floor - floor; {
-				case diff > 0:
-
-				case diff < 0:
-				case diff == 0:
-					Dir = MD_Stop
-					break Loop
-				}
-			case MD_Down:
-				switch diff := Node.Floor - floor; {
-				case diff > 0:
-				case diff < 0:
-				case diff == 0:
-					Dir = MD_Stop
-					break Loop
-				}
-			case MD_Stop:
-				switch diff := Node.Floor - floor; {
-				case diff > 0:
-				case diff < 0:
-				case diff == 0:
-					Dir = MD_Stop
-					break Loop
-				}
-			}
-		}
+	if orderAvailable() {
+		return orderInFront()
 	}
-	return Dir
+	return MD_Stop
 }
 
 func Run(ch StateMachineChannels) {
-	elevio.Init("localhost:15657", config.MFloors)
-
 	//var state = ES_Init
 
 	for i := range Global.Orders {
@@ -106,14 +100,26 @@ func Run(ch StateMachineChannels) {
 	go dummyQueue(ch.NewOrder)
 
 	elevio.SetMotorDirection(MD_Down)
-	<-ch.FloorSensor
+	Node.Floor = <-ch.FloorSensor
 	elevio.SetMotorDirection(MD_Stop)
 
 	for {
 		select {
 		case <-ch.NewOrder:
 			//TODO: Add order to OrderMatrix
-			fmt.Println("Hello")
+			dir := calculateDirection()
+			elevio.SetMotorDirection(dir)
+			Node.Dir = dir
+			fmt.Println("Hello, dir: ", dir)
+		case floor := <-ch.FloorSensor:
+			fmt.Println("Arrived at floor:", floor)
+			Node.Floor = floor
+			if Node.Queue[floor] {
+				Node.Queue[floor] = false
+				dir := calculateDirection()
+				elevio.SetMotorDirection(dir)
+				Node.Dir = dir
+			}
 
 		/* OLD State machine */
 		default:

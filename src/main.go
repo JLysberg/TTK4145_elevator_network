@@ -1,19 +1,26 @@
 package main
 
 import (
-	"./pkg/elevio"
+	// "./pkg/elevio"
 
-	"./internal/fsm"
-	. "./internal/common/types"
-	/*"./internal/cost_estimator"
-	"./internal/monitor"*/
+	// "./internal/fsm"
+	// . "./internal/common/types"
+	// /*"./internal/cost_estimator"
+	// "./internal/monitor"*/
+	"pkg/elevio"
+
+	"internal/common/config"
+	. "internal/common/types"
+	"internal/fsm"
 )
 
 func main() {
+	elevio.Init("localhost:15657", config.MFloors)
+
 	ch := fsm.StateMachineChannels{
-		ButtonPress: make(chan ButtonEvent),
-		NewOrder: make(chan bool),
-		FloorSensor: make(chan int),
+		ButtonPress:       make(chan ButtonEvent),
+		NewOrder:          make(chan bool),
+		FloorSensor:       make(chan int),
 		ObstructionSwitch: make(chan bool),
 	}
 

@@ -93,42 +93,56 @@ func KingOfOrders(btnsPressedLocal <-chan ButtonPress, newPackets <-chan PacketR
 	var bestchoiceDOWN = id
 	var bestchoiceUP = id
 
+	var upOrder = false
+	var downOrder = false
 	//If we're offline, only check own column in matrix
 
 	for floor = 0; floor < config.MFloors; floor++ {
+		//is it possible to use append?
+		if types.GlobalInfo.Orders[floor][types.GlobalInfo.ID].Cab {
+			types.NodeInfo.Queue = append(types.NodeInfo.Queue, floor)
+		}
+
 		for elev := 0; elev < config.NElevs; elev++ {
-			for _, NodeInfo := range types.GlobalInfo.Orders {
+			if types.GlobalInfo.Orders[floor][elev].Up{
+				upOrder = true	
+			}
 
-				//HER MÅ DET IMPLEMENTERES: Noe som sjekker bare heisene som er på nettverket.
+			if types.GlobalInfo.Orders[floor][elev].Down{
+				downOrder = true
+			}
+		
+			for elev, NodeInfo := range types.GlobalInfo.Nodes {
 
-				if types.GlobalInfo.Orders[floor][elev].Cab && elev == id {
-					FSMQueue = append(FSMQueue, floor)
-				}
-
+			//HER MÅ DET IMPLEMENTERES: Noe som sjekker bare heisene som er på nettverket.
 				///Only take down-orders if we're going down
-				if types.GlobalInfo.Orders[floor][elev].Down && types.NodeInfo.LastDir == -1 {
-					if abs(types.NodeInfo.Floor-floor) < floordifferenceDOWN {
-						floordifferenceDOWN = types.NodeInfo.Floor - floor
+				//LastDir undefined
+				//if there exists an UP-order at all at a given floor > 
+				if  downOrder && types.GlobalInfo.Nodes[elev].LastDir == -1 {
+					if abs(types.GlobalInfo.Nodes[elev].Floor-floor) < floordifferenceDOWN {
+						floordifferenceDOWN = types.GlobalInfo.Nodes[elev].Floor - floor
 						bestchoiceDOWN = elev
 					}
 				}
 
 				//Only take up-orders if we're going up
-				if types.GlobalInfo.Orders[floor][elev].Up && types.NodeInfo.LastDir == 1 {
-					if abs(types.NodeInfo.Floor-floor) < floordifferenceUP {
-						floordifferenceUP = types.NodeInfo.Floor - floor
+				if upOrder && types.GlobalInfo.Nodes[elev].LastDir == 1 {
+					if abs(types.Globalinfo.Nodes[elev].Floor-floor) < floordifferenceUP {
+						floordifferenceUP = types.Globalinfo.Nodes[elev].Floor - floor
 						bestchoiceUP = elev
 					}
 				}
 			}
+			upOrder, downOrder = false, false
 			floordifferenceUP, floordifferenceDOWN = config.MFloors, config.MFloors
-			if bestchoiceUP == id {
-				FSMQueue = append(FSMQueue, floor)
+			if bestchoiceUP == types.GlobalInfo.ID {
+				types.NodeInfo.Queue = append(types.NodeInfo.Queue, floor)
 			}
-			if bestchoiceDOWN == id {
-				FSMQueue = append(FSMQueue, floor)
+			if bestchoiceDOWN == types.GlobalInfo.ID {
+				types.NodeInfo.Queue = append(types.NodeInfo.Queue, floor)
 			}
 		}
+	}
 	}
 
 	//HER MÅ DET IMPLEMENTERES: En ticker for å sende FSMQueue til FSM.

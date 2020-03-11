@@ -1,9 +1,7 @@
 package watchdog
 
-import (
-	//"fmt"
-	//"time"
-)
+//"fmt"
+//"time"
 
 /*func UpdateWatchdog(newPackets chan packetReceiver){
 	select{
@@ -13,7 +11,7 @@ import (
 				if err != nil {
 					fmt.Println("Error with unmarshaling message in Watchdog:", err)
 				}
-				
+
 				ElevLastSent[msg.LocalID] = time.Now()
 			}
 		}
@@ -31,7 +29,7 @@ import (
 
 func AmIOffline(id int){
 	Solitude := true
-	
+
 	for i := 0; i < NElevs; i++{
 		if OnlineList[i] && i != id{
 			Solitude = false

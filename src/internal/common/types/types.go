@@ -52,7 +52,7 @@ type NodeInfo struct {
 }
 
 type GlobalInfo struct {
-	Nodes  [config.NElevs]NodeInfo //Could possibly be exchanged with an array
-	Orders [config.MFloors][config.NElevs]FloorState
+	Nodes   [config.NElevs]NodeInfo //Could possibly be exchanged with an array
+	Orders  [config.MFloors][config.NElevs]FloorState
 	LocalID int
 }

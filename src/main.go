@@ -22,7 +22,7 @@ import (
 func main() {
 	elevio.Init("localhost:15657", config.MFloors)
 	var (
-		id    string
+		id string
 	)
 
 	flag.StringVar(&id, "id", "0", "id of this elevator")
@@ -36,8 +36,7 @@ func main() {
 		NewOrder:          make(chan bool),
 		FloorSensor:       make(chan int),
 		ObstructionSwitch: make(chan bool),
-		PacketReceiver: make(chan GlobalInfo),
-		
+		PacketReceiver:    make(chan GlobalInfo),
 	}
 
 	//go cost_estimator.UpdateQueue()

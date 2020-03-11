@@ -1,32 +1,42 @@
 package watchdog
 
-//"fmt"
-//"time"
+import (
+	"fmt"
+	"time"
 
-/*func UpdateWatchdog(newPackets chan packetReceiver){
+	/* GOPATH setup */
+	"encoding/json"
+
+	. "internal/common/config"
+	. "internal/common/types"
+	//"pkg/elevio"
+)
+
+func UpdateWatchdog(newPackets chan packetReceiver){
 	select{
 		case packet := <- newPackets
-				var msg GlobalInfo
+				var msg types.GlobalInfo
 				err := json.Unmarshal(packet, &msg)
 				if err != nil {
 					fmt.Println("Error with unmarshaling message in Watchdog:", err)
 				}
 
-				ElevLastSent[msg.LocalID] = time.Now()
+				types.NodeInfo.ElevLastSent[msg.LocalID] = time.Now()
 			}
 		}
 	}
 
-	for i := 0; i < NElevs; i++{
-		if (time.Now() - ElevLastSent[i]) < 3 * time.Second(){
-			OnlineList[i] = 1
+	for i := 0; i < config.NElevs; i++{
+		if (time.Now() - types.NodeInfo.ElevLastSent[i]) < 3 * time.Second(){
+			types.NodeInfo.OnlineList[i] = 1
 		}
 		else{
-			OnlineList[i] = 0
+			types.NodeInfo.OnlineList[i] = 0
 		}
 	}
 }
 
+/*
 func AmIOffline(id int){
 	Solitude := true
 

@@ -47,12 +47,10 @@ type NodeInfo struct {
 	Queue        [config.MFloors]bool
 	OnlineList   [config.NElevs]bool
 	ElevLastSent [config.NElevs]int
-	ID           int
-	OrdersLocal  [config.MFloors][config.NElevs]FloorState
 }
 
 type GlobalInfo struct {
+	ID int
 	Nodes   [config.NElevs]NodeInfo //Could possibly be exchanged with an array
 	Orders  [config.MFloors][config.NElevs]FloorState
-	LocalID int
 }

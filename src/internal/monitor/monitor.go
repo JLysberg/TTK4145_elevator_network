@@ -87,27 +87,28 @@ func KingOfOrders(btnsPressedLocal chan buttonPress, newPackets chan packetRecei
 			if err != nil {
 				fmt.Println("Error with unmarshaling message:", err)
 			}
-
-			if msg.Orders != OrdersLocal{
+			newOrders := msg.Orders
+			//Is it important to only add new orders?
+			if newOrders != Orders{
 				for floors := 0; floors < MFloors; floors++ {
 					for elevs := 0; elevs < NElevs; elevs++
 						
-						if msg.Orders[floors][elevs].Clear
+						if newOrders[floors][elevs].Clear
 							//HER MÅ DET IMPLEMENTERES: En ticker som venter i f.eks. 2 sekunder før vi clearer
-							OrdersLocal[floors][elevs].Up = false
-							OrdersLocal[floors][elevs].Down = false
-							OrdersLocal[floors][elevs].Cab = false			
+							Orders[floors][elevs].Up = false
+							Orders[floors][elevs].Down = false
+							Orders[floors][elevs].Cab = false			
 						}
-						if msg.Orders[floors][elevs].Cab && elevs == id{
-							OrdersLocal[floors][elevs].Cab = true				
+						if newOrders[floors][id].Cab{ //&& elevs == id{
+							Orders[floors][id].Cab = true				
 						}	
 							
-						if msg.Orders[floors][elevs].Up{ 
-							OrdersLocal[floors][elevs].Up = true
+						if newOrders[floors][elevs].Up{ 
+							Orders[floors][elevs].Up = true
 						}
 				
-						if msg.Orders[floors][elevs].Down{
-							OrdersLocal[floors][key].Down = true
+						if newOrders[floors][elevs].Down{
+							Orders[floors][elevs].Down = true
 						}
 					}
 				}
@@ -124,6 +125,9 @@ func KingOfOrders(btnsPressedLocal chan buttonPress, newPackets chan packetRecei
 	bestchoiceDOWN := id
 	bestchoiceUP := id
 
+	//If we're offline, only check own column in matrix
+
+
 	for floor := 0; floor < MFloors; floor++ {
 		for elev := 0; elev < NElevs; elev++ { 
 			for _, NodeInfo := range GlobalInfo.Nodes {
@@ -134,7 +138,7 @@ func KingOfOrders(btnsPressedLocal chan buttonPress, newPackets chan packetRecei
 					FSMQueue = append(FSMQueue, floor)
 				}
 
-				///Only take down-orders if we're going down/standing still
+				///Only take down-orders if we're going down
 				if OrdersLocal[floor][elev].Down && LastDir == -1{ 
 					if abs(NodeInfo.Floor - floor) < floordifferenceDOWN{
 						floordifferenceDOWN = NodeInfo.Floor - floor
@@ -142,7 +146,7 @@ func KingOfOrders(btnsPressedLocal chan buttonPress, newPackets chan packetRecei
 					} 
 				}
 
-				//Only take up-orders if we're going up/standing still
+				//Only take up-orders if we're going up
 				if OrdersLocal[floor][elev].Up && LastDir == 1{ 
 					if abs(NodeInfo.Floor - floor) < floordifferenceUP{
 						floordifferenceUP = NodeInfo.Floor - floor
@@ -161,6 +165,7 @@ func KingOfOrders(btnsPressedLocal chan buttonPress, newPackets chan packetRecei
 		}
 	}
 
+
 	//HER MÅ DET IMPLEMENTERES: En ticker for å sende FSMQueue til FSM. 
 		//F.eks.: //Lag en kanal som har typen FSMQueue, 
 				//FSM sjekker ved en select: case hvert 3. millisekund om noe nytt har kommet inn på kanalen  
@@ -177,7 +182,7 @@ func lightSetter(id string, sensor chan floorsensor){
 		case thisfloor := <- sensor
 			SetFloorIndicator(thisfloor)
 
-			//HER MÅ DET IMPLEMENTERES: Funksjonalitet for å skru AV floorindicator på alle andre etasjer
+			//HER MÅ DET IMPLEMENTERES: Funksjonalitet for å skru AV floorindicator på alle andre etasjer enn thisfloor
 		}
 	}
 
@@ -202,8 +207,4 @@ func lightSetter(id string, sensor chan floorsensor){
 			}
 		}
 	}
-}
-
-func setLastDirection(i int){
-	last_dir = i
 }

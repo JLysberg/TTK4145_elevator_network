@@ -38,14 +38,14 @@ type FloorState struct {
 }
 
 type NodeInfo struct {
-	IP          string
-	id          int
-	State       ElevatorState
-	Dir         MotorDirection
-	LastDir     int
-	Floor       int
-	Queue       []bool
-	OrdersLocal [][]FloorState
+	IP      string
+	id      int
+	State   ElevatorState
+	Dir     MotorDirection
+	LastDir int
+	Floor   int
+	Queue   []bool
+	//OrdersLocal [][]FloorState
 }
 
 type GlobalInfo struct {
@@ -53,6 +53,6 @@ type GlobalInfo struct {
 	LocalIP      string
 	OnlineList   [NElevs]bool
 	ElevLastSent [NElevs]int
-	Nodes        map[string]NodeInfo
+	Nodes        map[int]NodeInfo
 	Orders       [][]FloorState
 }

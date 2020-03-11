@@ -1,7 +1,7 @@
 package fsm
 
 import (
-	//"fmt"
+	"fmt"
 	"time"
 	"math/rand"
 
@@ -23,6 +23,7 @@ type StateMachineChannels struct {
 	ObstructionSwitch chan bool
 	NewOrder          chan bool
 	PacketReceiver    chan []byte
+	ClearCab		  chan bool
 }
 
 func dummyQueue(ch chan<- bool) {
@@ -87,15 +88,12 @@ func setNodeDirection(dir MotorDirection) {
 }
 
 func Run(ch StateMachineChannels) {
-	//var state = ES_Init
-
-	//go dummyQueue(ch.NewOrder)
-
 	setNodeDirection(MD_Down)
 	monitor.Node.Floor = <-ch.FloorSensor
 	setNodeDirection(MD_Stop)
 
 	for {
+		fmt.Println(monitor.Global.Orders)
 		select {
 		case <-ch.NewOrder:
 			switch monitor.Node.State {
@@ -111,10 +109,14 @@ func Run(ch StateMachineChannels) {
 			elevio.SetFloorIndicator(floor)
 			monitor.Node.Floor = floor
 			if monitor.Node.Queue[floor] {
-				monitor.Node.Queue[floor] = false
+				monitor.Global.Orders[floor][monitor.Global.ID].Clear = true
 				elevio.SetButtonLamp(BT_Cab, floor, false)
 				setNodeDirection(calculateDirection())
 			}
 		}
 	}
 }
+
+//TODO: Add timer for removal of "clear"-inputs of order matrix
+//TODO: Add door/obstruction timer
+//TODO: Network

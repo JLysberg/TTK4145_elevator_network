@@ -2,5 +2,5 @@ package config
 
 const (
 	MFloors = 4
-	NElevs  = 2
+	NElevs  = 1
 )

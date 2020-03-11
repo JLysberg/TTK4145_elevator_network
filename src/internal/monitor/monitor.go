@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 	"encoding/json"
+	"math"
 
 	//"encoding/json"
 
@@ -35,12 +36,14 @@ var Global = GlobalInfo{
 }
 
 const (
-	_UpdateRate = 20 * time.Millisecond
+	_UpdateRate = 500 * time.Millisecond
 )
 
 func KingOfOrders(btnsPressedLocal <-chan ButtonEvent, newPackets <-chan []byte,
-				  newOrderLocal chan<- bool) {
+				  newOrderLocal chan<- bool, clearCab <-chan bool) {
 	for {
+		time.Sleep(_UpdateRate)
+
 		select {
 		case btn := <-btnsPressedLocal:
 			switch btn.Button {
@@ -82,33 +85,86 @@ func KingOfOrders(btnsPressedLocal <-chan ButtonEvent, newPackets <-chan []byte,
 					}
 				}
 			}
+		case <-clearCab:
+
 		default:
 			// ---- Cost Estimator ---- //
 			// Consider assigning designated thread
+			// TODO: Implement support for watchdog elev timeout table
 
-			//cost := 100000
-			
-			for floor, fs := range Global.Orders[:][config.NElevs] {
-				fmt.Println("floor:", floor, "fs:", fs)
-				// if fs.Cab {
-				// 	Node.Queue[floor] = true
-				// 	newOrderLocal <- true
-				// }
+			/* Pre-check for cab orders */
+			for floor, floorStates := range Global.Orders {
+				if floorStates[Global.ID].Cab && !floorStates[Global.ID].Clear{
+					Node.Queue[floor] = true
+					newOrderLocal <- true
+				}
 			}
+			/* Cost calculation for non-cab orders */
+			for floor, floorStates := range Global.Orders {
+				for orderOwner, floorState := range floorStates {
+					if floorState.Clear {
+						if orderOwner == Global.ID {
+							Global.Orders[floor][Global.ID].Cab = false
+							Node.Queue[floor] = false
+						}
+						for elevID := 0; elevID < config.NElevs; elevID++ {
+							Global.Orders[floor][elevID].Up = false
+							Global.Orders[floor][elevID].Down = false
+						}
+					} else if floorState.Up || floorState.Down{
+						bestCost := int(math.Inf(1))
+						bestID := 0
+						cost := 0
+						for elevID, node := range Global.Nodes {
+							floorDiff := int(math.Abs(float64(node.Floor - floor)))
 
+							/*	Calculate floor distance cost
+								Distance	Cost
+								0			+0
+								1			+2
+								2			+3
+								..
+								M 			+(M + 1)
+							*/
+							if floorDiff != 0 {
+								cost += floorDiff + 1
+							}
 
+							/*	Calculate pass cost
+								Condition	Cost
+								Will pass	+0
+								Stopped		+1
+								Has passed	+5
+							*/
+							switch node.Dir{
+							case MD_Down:
+								if floorDiff >= 0 && floorState.Down {
+									break
+								} else {
+									cost += 5
+								}
+							case MD_Up:
+								if floorDiff >= 0 && floorState.Up {
+									break
+								} else {
+									cost += 5
+								}
+							case MD_Stop:
+								cost += 1
+							}
 
-
-
-
-
-
-
-
-
-
-
-
+							if cost < bestCost {
+								bestCost = cost
+								bestID = elevID
+							}
+						}
+						if bestID == Global.ID {
+							Node.Queue[floor] = true
+							newOrderLocal <- true
+						}
+					}
+				}
+			}
 					//HER MÅ DET IMPLEMENTERES: Noe som sjekker bare heisene som er på nettverket.
 				// 	// if Global.Orders[floor][elev].Up{
 				// 		upOrder = true	

@@ -37,11 +37,12 @@ func main() {
 		FloorSensor:       make(chan int),
 		ObstructionSwitch: make(chan bool),
 		PacketReceiver:    make(chan []byte),
+		ClearCab: 		   make(chan bool),
 	}
 
 	//go cost_estimator.UpdateQueue()
 
-	go monitor.KingOfOrders(ch.ButtonPress, ch.PacketReceiver, ch.NewOrder)
+	go monitor.KingOfOrders(ch.ButtonPress, ch.PacketReceiver, ch.NewOrder, ch.ClearCab)
 
 	go elevio.PollButtons(ch.ButtonPress)
 	go elevio.PollFloorSensor(ch.FloorSensor)

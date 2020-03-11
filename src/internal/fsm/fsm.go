@@ -3,18 +3,18 @@ package fsm
 import (
 	//"fmt"
 	"time"
+	"math/rand"
 
 	/* LAB setup */
-	// "../common/config"
-	// . "../common/types"
-	// /*"../cost_estimator"
-	// "../monitor"*/
-	//"../../pkg/elevio"
+	. "../common/types"
+	"../monitor"
+	"../../pkg/elevio"
+	"../common/config"
 
 	/* GOPATH setup */
-	. "internal/common/types"
-	"internal/monitor"
-	"pkg/elevio"
+	// . "internal/common/types"
+	// "internal/monitor"
+	// "pkg/elevio"
 )
 
 type StateMachineChannels struct {
@@ -22,13 +22,18 @@ type StateMachineChannels struct {
 	FloorSensor       chan int
 	ObstructionSwitch chan bool
 	NewOrder          chan bool
-	PacketReceiver    chan GlobalInfo
+	PacketReceiver    chan []byte
 }
 
 func dummyQueue(ch chan<- bool) {
-	time.Sleep(4000 * time.Millisecond)
-	monitor.Node.Queue[2] = true
-	ch <- true
+	var r int
+	for {
+		r = rand.Intn(config.MFloors)
+		time.Sleep(5000 * time.Millisecond)
+		monitor.Node.Queue[r] = true
+		elevio.SetButtonLamp(BT_Cab, r, true)
+		ch <- true
+	}
 }
 
 func orderInFront() MotorDirection {
@@ -74,15 +79,17 @@ func calculateDirection() MotorDirection {
 }
 
 func setNodeDirection(dir MotorDirection) {
-	monitor.Node.LastDir = monitor.Node.Dir
-	monitor.Node.Dir = dir
 	elevio.SetMotorDirection(dir)
+	monitor.Node.Dir = dir
+	if dir != MD_Stop{
+		monitor.Node.LastDir = monitor.Node.Dir
+	}
 }
 
 func Run(ch StateMachineChannels) {
 	//var state = ES_Init
 
-	go dummyQueue(ch.NewOrder)
+	//go dummyQueue(ch.NewOrder)
 
 	setNodeDirection(MD_Down)
 	monitor.Node.Floor = <-ch.FloorSensor
@@ -91,11 +98,21 @@ func Run(ch StateMachineChannels) {
 	for {
 		select {
 		case <-ch.NewOrder:
+			switch monitor.Node.State {
+			case ES_Stop:
+				fallthrough
+			case ES_Idle:
+				//TODO: jdfksjldfk
+			case ES_Run:
+				//TODO
+			}
 			setNodeDirection(calculateDirection())
 		case floor := <-ch.FloorSensor:
+			elevio.SetFloorIndicator(floor)
 			monitor.Node.Floor = floor
 			if monitor.Node.Queue[floor] {
 				monitor.Node.Queue[floor] = false
+				elevio.SetButtonLamp(BT_Cab, floor, false)
 				setNodeDirection(calculateDirection())
 			}
 		}

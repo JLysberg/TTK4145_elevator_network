@@ -6,17 +6,17 @@ import (
 	"strconv"
 
 	/* LAB setup */
-	// "./pkg/elevio"
-	// "./internal/fsm"
-	// . "./internal/common/types"
-	// /*"./internal/cost_estimator"
-	// "./internal/monitor"*/
+	"./pkg/elevio"
+	"./internal/fsm"
+	. "./internal/common/types"
+	"./internal/common/config"
+	"./internal/monitor"
 
 	/* GOPATH setup */
-	"internal/common/config"
-	. "internal/common/types"
-	"internal/fsm"
-	"pkg/elevio"
+	// "internal/common/config"
+	// . "internal/common/types"
+	// "internal/fsm"
+	// "pkg/elevio"
 )
 
 func main() {
@@ -29,19 +29,19 @@ func main() {
 	//flag.IntVar(&ID, "id", 0, "id of this elevator")
 	flag.Parse()
 	ID, _ := strconv.Atoi(id)
-	fmt.Print("ID is", ID)
+	fmt.Println("ID is", ID)
 
 	ch := fsm.StateMachineChannels{
 		ButtonPress:       make(chan ButtonEvent),
 		NewOrder:          make(chan bool),
 		FloorSensor:       make(chan int),
 		ObstructionSwitch: make(chan bool),
-		PacketReceiver:    make(chan GlobalInfo),
+		PacketReceiver:    make(chan []byte),
 	}
 
 	//go cost_estimator.UpdateQueue()
 
-	//go monitor.PollOrders(ch.ButtonPress)
+	go monitor.KingOfOrders(ch.ButtonPress, ch.PacketReceiver, ch.NewOrder)
 
 	go elevio.PollButtons(ch.ButtonPress)
 	go elevio.PollFloorSensor(ch.FloorSensor)

@@ -1,6 +1,6 @@
 package types
 
-import "internal/common/config"
+import "../config"
 
 type MotorDirection int
 

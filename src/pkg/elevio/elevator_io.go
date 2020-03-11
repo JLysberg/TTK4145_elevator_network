@@ -7,10 +7,10 @@ import (
 	"time"
 
 	/* LAB setup */
-	// . "../../internal/common/types"
+	. "../../internal/common/types"
 
 	/* GOPATH setup */
-	. "internal/common/types"
+	// . "internal/common/types"
 )
 
 const _pollRate = 20 * time.Millisecond

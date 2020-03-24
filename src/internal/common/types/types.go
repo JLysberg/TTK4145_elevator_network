@@ -1,6 +1,12 @@
 package types
 
-import "../config"
+import (
+	/* LAB setup */
+	// "../config"
+
+	/* GOPATH setup */
+	"internal/common/config"
+)
 
 type MotorDirection int
 

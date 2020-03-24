@@ -2,28 +2,30 @@ package fsm
 
 import (
 	"fmt"
-	"time"
 	"math/rand"
+	"time"
 
 	/* LAB setup */
-	. "../common/types"
-	"../monitor"
-	"../../pkg/elevio"
-	"../common/config"
+	// . "../common/types"
+	// "../common/config"
+	// "../monitor"
+	// "../../pkg/elevio"
 
 	/* GOPATH setup */
-	// . "internal/common/types"
-	// "internal/monitor"
-	// "pkg/elevio"
+	"internal/common/config"
+	. "internal/common/types"
+	"internal/monitor"
+	"pkg/elevio"
 )
 
 type StateMachineChannels struct {
-	ButtonPress       chan ButtonEvent
-	FloorSensor       chan int
-	ObstructionSwitch chan bool
-	NewOrder          chan bool
-	PacketReceiver    chan []byte
-	ClearCab		  chan bool
+	ButtonPress          chan ButtonEvent
+	FloorSensor          chan int
+	ObstructionSwitch    chan bool
+	NewOrder             chan bool
+	PacketReceiver       chan []byte
+	ButtonLights_Refresh chan int
+	ClearOrder          chan int
 }
 
 func dummyQueue(ch chan<- bool) {
@@ -82,8 +84,22 @@ func calculateDirection() MotorDirection {
 func setNodeDirection(dir MotorDirection) {
 	elevio.SetMotorDirection(dir)
 	monitor.Node.Dir = dir
-	if dir != MD_Stop{
+	if dir != MD_Stop {
 		monitor.Node.LastDir = monitor.Node.Dir
+	}
+}
+
+func Printer() {
+	for {
+		time.Sleep(1 * time.Second)
+
+		for _, floorStates := range monitor.Global.Orders {
+			for _, floorState := range floorStates {
+				fmt.Println(floorState)
+			}
+		}
+		fmt.Println()
+		//fmt.Println(monitor.Global.Orders)
 	}
 }
 
@@ -93,7 +109,6 @@ func Run(ch StateMachineChannels) {
 	setNodeDirection(MD_Stop)
 
 	for {
-		fmt.Println(monitor.Global.Orders)
 		select {
 		case <-ch.NewOrder:
 			switch monitor.Node.State {
@@ -109,8 +124,7 @@ func Run(ch StateMachineChannels) {
 			elevio.SetFloorIndicator(floor)
 			monitor.Node.Floor = floor
 			if monitor.Node.Queue[floor] {
-				monitor.Global.Orders[floor][monitor.Global.ID].Clear = true
-				elevio.SetButtonLamp(BT_Cab, floor, false)
+				ch.ClearOrder <- floor
 				setNodeDirection(calculateDirection())
 			}
 		}

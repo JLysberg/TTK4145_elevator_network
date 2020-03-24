@@ -3,13 +3,15 @@ package watchdog
 import (
 	"fmt"
 	"time"
-
-	/* GOPATH setup */
 	"encoding/json"
 
-	. "internal/common/config"
+	/* LAB setup */
+	// . "../common/types"
+	// "../common/config"	
+
+	/* GOPATH setup */
 	. "internal/common/types"
-	//"pkg/elevio"
+	"internal/common/config"
 )
 
 func UpdateWatchdog(newPackets chan packetReceiver){

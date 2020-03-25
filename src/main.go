@@ -57,6 +57,7 @@ func main() {
 
 /*
 KNOWN BUGS:
+Jostein:
 	- fsm: Elevator does not care whether order at current floor is up/down
 		and stops regardsless. Most likely caused by orderInFront().
 	- fsm: Elevator does not stop and handle new order if order is at
@@ -64,12 +65,15 @@ KNOWN BUGS:
 		which only sends floor on channel on change.
 
 TODO:
+Jostein:
 	- monitor: Split cost estimator into sereral threads to improve performance.
 		Current run time with one elevator and all orders present is about ~2s,
 		which is unacceptable and will introduce problems later.
 	- fsm: Implement obstruction timer
 	- fsm/monitor: Semaphore integration between order clearance in monitor and
 		setDirection in fsm
+	- monitor: watchdog lookup table in cost estimator
+
 	- network
-	- watchdog lookup table in cost estimator
+	- watchdog: lookup table integration with network
 */

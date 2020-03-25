@@ -32,9 +32,10 @@ var Global = GlobalInfo{
 }
 
 func CostEstimator(newOrderLocal chan<- bool) {
-	// TODO: Implement support for watchdog elev timeout table
 	for {
 		time.Sleep(config.CostEstimator_UpdateRate)
+		// beginTotal := time.Now()
+		// beginPre := time.Now()
 		/* Pre-check for cab orders */
 		for floor, floorStates := range Global.Orders {
 			if floorStates[Global.ID].Cab && !floorStates[Global.ID].Clear{
@@ -42,9 +43,15 @@ func CostEstimator(newOrderLocal chan<- bool) {
 				newOrderLocal <- true
 			}
 		}
+		// endPre := time.Since(beginPre)
+		// fmt.Println("||Pre-check:\t\t", endPre)
+		// fmt.Println("|")
+		// beginCC1 := time.Now()
 		/* Cost calculation for non-cab orders */
 		for floor, floorStates := range Global.Orders {
+			// beginCC2 := time.Now()
 			for elevID, floorState := range floorStates {
+				// beginCC3 := time.Now()
 				if floorState.Clear {
 					if elevID == Global.ID {
 						Node.Queue[floor] = false
@@ -104,13 +111,21 @@ func CostEstimator(newOrderLocal chan<- bool) {
 						newOrderLocal <- true
 					}
 				}
+				// endCC3 := time.Since(beginCC3)
+				// fmt.Println("||||Calculation:\t",endCC3)
 			}
+			// endCC2 := time.Since(beginCC2)
+			// fmt.Println("|||Elevator loop:\t",endCC2)
 		}
+		// endCC1 := time.Since(beginCC1)
+		// endTotal := time.Since(beginTotal)
+		// fmt.Println("||Floor loop:\t\t",endCC1)
+		// fmt.Println("|Total:\t\t\t",endTotal)
+		// fmt.Println()
 	}
 }
 
 func clearTimeout(floor int) {
-	fmt.Println("Clearing on floor", floor)
 	Global.Orders[floor][Global.ID].Clear = true
 	timeout := time.NewTimer(config.ClearTimeout)
 	<-timeout.C
@@ -119,10 +134,8 @@ func clearTimeout(floor int) {
 
 func KingOfOrders(btnsPressedLocal <-chan ButtonEvent, newPackets <-chan []byte,
 				  refreshButtonLights chan<- int, clearOrderLocal chan int) {
-	/* Initially refresh all button lights */
 	refreshButtonLights <- -1
 	for {
-		//TODO: Send order matrix to network
 		select {
 		case btn := <-btnsPressedLocal:
 			switch btn.Button {
@@ -163,12 +176,14 @@ func KingOfOrders(btnsPressedLocal <-chan ButtonEvent, newPackets <-chan []byte,
 						}
 					}
 				}
-				/* Refresh all button lights on new packet reception */
 				refreshButtonLights <- -1
 			}
 		case floor := <-clearOrderLocal:
 			go clearTimeout(floor)
 
+			/* Hack to ensure each elevator is not dependent on a full
+			   cost estimator run to clear order from queue */
+			Node.Queue[floor] = false
 			/* The following block might be superfluous when networks are introduced*/
 			/********************************************/
 			/* Remove all up/down orders if there is a clear present */
@@ -192,7 +207,6 @@ on refresh call
 func LightSetter(refresh <-chan int) {
 	for {
 		floor := <-refresh
-		fmt.Println("refreshing button lights on floor", floor)
 		// Really bad code quality, but this works for now :)
 		if floor != -1 {
 			for elevID := 0; elevID < config.NElevs; elevID++ {

@@ -2,17 +2,14 @@ package fsm
 
 import (
 	"fmt"
-	"math/rand"
 	"time"
 
 	/* LAB setup */
 	// . "../common/types"
-	// "../common/config"
 	// "../monitor"
 	// "../../pkg/elevio"
 
 	/* GOPATH setup */
-	"internal/common/config"
 	. "internal/common/types"
 	"internal/monitor"
 	"pkg/elevio"
@@ -28,41 +25,23 @@ type StateMachineChannels struct {
 	ClearOrder          chan int
 }
 
-func dummyQueue(ch chan<- bool) {
-	var r int
-	for {
-		r = rand.Intn(config.MFloors)
-		time.Sleep(5000 * time.Millisecond)
-		monitor.Node.Queue[r] = true
-		elevio.SetButtonLamp(BT_Cab, r, true)
-		ch <- true
-	}
-}
-
-func orderInFront() MotorDirection {
+func orderInFront() bool {
 	for floor, order := range monitor.Node.Queue {
 		if order {
 			diff := monitor.Node.Floor - floor
-			switch monitor.Node.Dir {
+			switch monitor.Node.LastDir {
 			case MD_Up:
 				if diff < 0 {
-					return MD_Up
+					return true
 				}
 			case MD_Down:
 				if diff > 0 {
-					return MD_Down
-				}
-			case MD_Stop:
-				switch {
-				case diff < 0:
-					return MD_Up
-				case diff > 0:
-					return MD_Down
+					return true
 				}
 			}
 		}
 	}
-	return MD_Stop
+	return false
 }
 
 func orderAvailable() bool {
@@ -76,12 +55,21 @@ func orderAvailable() bool {
 
 func calculateDirection() MotorDirection {
 	if orderAvailable() {
-		return orderInFront()
+		if orderInFront() {
+			return monitor.Node.LastDir
+		} else {
+			return -1 * monitor.Node.LastDir
+		}
+	} else {
+		return MD_Stop
 	}
-	return MD_Stop
 }
 
-func setNodeDirection(dir MotorDirection) {
+func setNodeDirection() {
+	/* Minor delay to allow cost estimator to evaluate orders 
+	   CONSIDER USING SEMAPHORES */
+	time.Sleep(1 * time.Nanosecond)
+	dir := calculateDirection()
 	elevio.SetMotorDirection(dir)
 	monitor.Node.Dir = dir
 	if dir != MD_Stop {
@@ -95,19 +83,25 @@ func Printer() {
 
 		for _, floorStates := range monitor.Global.Orders {
 			for _, floorState := range floorStates {
-				fmt.Println(floorState)
+				fmt.Println("*", floorState)
 			}
 		}
+		fmt.Println("#", monitor.Node.Queue)
 		fmt.Println()
-		//fmt.Println(monitor.Global.Orders)
 	}
 }
 
-func Run(ch StateMachineChannels) {
-	setNodeDirection(MD_Down)
-	monitor.Node.Floor = <-ch.FloorSensor
-	setNodeDirection(MD_Stop)
+func elev_Init(floorSensor <-chan int) {
+	elevio.SetMotorDirection(MD_Down)
+	monitor.Node.LastDir = MD_Down
+	floor := <-floorSensor
+	monitor.Node.Floor = floor
+	elevio.SetFloorIndicator(floor)
+	elevio.SetMotorDirection(MD_Stop)
+}
 
+func Run(ch StateMachineChannels) {
+	elev_Init(ch.FloorSensor)
 	for {
 		select {
 		case <-ch.NewOrder:
@@ -119,18 +113,17 @@ func Run(ch StateMachineChannels) {
 			case ES_Run:
 				//TODO
 			}
-			setNodeDirection(calculateDirection())
+			setNodeDirection()
 		case floor := <-ch.FloorSensor:
 			elevio.SetFloorIndicator(floor)
 			monitor.Node.Floor = floor
 			if monitor.Node.Queue[floor] {
 				ch.ClearOrder <- floor
-				setNodeDirection(calculateDirection())
+				setNodeDirection()
 			}
 		}
 	}
 }
 
-//TODO: Add timer for removal of "clear"-inputs of order matrix
 //TODO: Add door/obstruction timer
 //TODO: Network

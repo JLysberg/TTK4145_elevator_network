@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"strconv"
 
 	/* LAB setup */
@@ -27,10 +26,10 @@ func main() {
 	)
 
 	flag.StringVar(&id, "id", "0", "id of this elevator")
-	//flag.IntVar(&ID, "id", 0, "id of this elevator")
+	// flag.IntVar(&ID, "id", 0, "id of this elevator")
 	flag.Parse()
 	ID, _ := strconv.Atoi(id)
-	fmt.Println("ID is", ID)
+	monitor.Global.ID = ID
 
 	ch := fsm.StateMachineChannels{
 		ButtonPress:          make(chan ButtonEvent),
@@ -42,8 +41,7 @@ func main() {
 		ClearOrder:           make(chan int),
 	}
 
-	//go cost_estimator.UpdateQueue()
-	go fsm.Printer()
+	// go fsm.Printer()
 
 	go monitor.CostEstimator(ch.NewOrder)
 	go monitor.KingOfOrders(ch.ButtonPress, ch.PacketReceiver,
@@ -60,8 +58,18 @@ func main() {
 /*
 KNOWN BUGS:
 	- fsm: Elevator does not care whether order at current floor is up/down
-		   and stops regardsless. Most likely caused by orderInFront().
+		and stops regardsless. Most likely caused by orderInFront().
 	- fsm: Elevator does not stop and handle new order if order is at
-		   elevators current floor. Caused by PollFloorSensor() goroutine
-		   which only sends floor on channel on change.
+		elevator's current floor. Caused by PollFloorSensor() goroutine
+		which only sends floor on channel on change.
+
+TODO:
+	- monitor: Split cost estimator into sereral threads to improve performance.
+		Current run time with one elevator and all orders present is about ~2s,
+		which is unacceptable and will introduce problems later.
+	- fsm: Implement obstruction timer
+	- fsm/monitor: Semaphore integration between order clearance in monitor and
+		setDirection in fsm
+	- network
+	- watchdog lookup table in cost estimator
 */

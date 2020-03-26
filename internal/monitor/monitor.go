@@ -7,17 +7,10 @@ import (
 	"math"
 	"time"
 
-	//"encoding/json"
-
-	/* LAB setup */
-	// . "../common/types"
-	// "../common/config"
-	// "../../pkg/elevio"
-
-	/* GOPATH setup */
-	"internal/common/config"
-	. "internal/common/types"
-	"pkg/elevio"
+	/* Setup desc. in main */
+	"github.com/JLysberg/TTK4145_elevator_network/internal/common/config"
+	. "github.com/JLysberg/TTK4145_elevator_network/internal/common/types"
+	"github.com/JLysberg/TTK4145_elevator_network/pkg/elevio"
 )
 
 var Node = NodeInfo{

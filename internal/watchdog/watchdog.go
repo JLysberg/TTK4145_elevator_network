@@ -5,13 +5,9 @@ import (
 	"time"
 	"encoding/json"
 
-	/* LAB setup */
-	// . "../common/types"
-	// "../common/config"	
-
-	/* GOPATH setup */
-	. "internal/common/types"
-	"internal/common/config"
+	/* Setup desc. in main */
+	. "github.com/JLysberg/TTK4145_elevator_network/internal/common/types"
+	"github.com/JLysberg/TTK4145_elevator_network/internal/common/config"
 )
 
 func UpdateWatchdog(newPackets chan packetReceiver){

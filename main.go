@@ -4,19 +4,17 @@ import (
 	"flag"
 	"strconv"
 
-	/* LAB setup */
-	// . "./internal/common/types"
-	// "./internal/common/config"
-	// "./internal/fsm"
-	// "./internal/monitor"
-	// "./pkg/elevio"
-
-	/* GOPATH setup */
-	"internal/common/config"
-	. "internal/common/types"
-	"internal/fsm"
-	"internal/monitor"
-	"pkg/elevio"
+	/*
+		1. Set GOPATH environment variable, e.g. to %USERPROFILE%/go. Can NOT
+		   equal to %GOROOT%.
+		2. Pull repository with "go get github.com/JLysberg/TTK4145_elevator_network"
+		3. The following import paths should be compatible
+	*/
+	"github.com/JLysberg/TTK4145_elevator_network/internal/common/config"
+	. "github.com/JLysberg/TTK4145_elevator_network/internal/common/types"
+	"github.com/JLysberg/TTK4145_elevator_network/internal/fsm"
+	"github.com/JLysberg/TTK4145_elevator_network/internal/monitor"
+	"github.com/JLysberg/TTK4145_elevator_network/pkg/elevio"
 )
 
 func main() {

@@ -4,15 +4,10 @@ import (
 	"fmt"
 	"time"
 
-	/* LAB setup */
-	// . "../common/types"
-	// "../monitor"
-	// "../../pkg/elevio"
-
-	/* GOPATH setup */
-	. "internal/common/types"
-	"internal/monitor"
-	"pkg/elevio"
+	/* Setup desc. in main*/
+	. "github.com/JLysberg/TTK4145_elevator_network/internal/common/types"
+	"github.com/JLysberg/TTK4145_elevator_network/internal/monitor"
+	"github.com/JLysberg/TTK4145_elevator_network/pkg/elevio"
 )
 
 type StateMachineChannels struct {

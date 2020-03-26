@@ -4,8 +4,8 @@ import (
 	/* LAB setup */
 	// "../config"
 
-	/* GOPATH setup */
-	"internal/common/config"
+	/* Setup desc. in main */
+	"github.com/JLysberg/TTK4145_elevator_network/internal/common/config"
 )
 
 type MotorDirection int

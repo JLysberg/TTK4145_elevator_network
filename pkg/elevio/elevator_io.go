@@ -6,11 +6,8 @@ import (
 	"sync"
 	"time"
 
-	/* LAB setup */
-	// . "../../internal/common/types"
-
-	/* GOPATH setup */
-	. "internal/common/types"
+	/* Setup desc. in main */
+	. "github.com/JLysberg/TTK4145_elevator_network/internal/common/types"
 )
 
 const _pollRate = 20 * time.Millisecond

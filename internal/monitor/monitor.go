@@ -32,7 +32,7 @@ func CostEstimator(newOrderLocal chan<- bool) {
 		/* Pre-check for cab orders */
 		for floor, floorStates := range Global.Orders {
 			if floorStates[Global.ID].Cab && !floorStates[Global.ID].Clear{
-				Node.Queue[floor] = true
+				Node.Queue[floor].Cab = true
 				newOrderLocal <- true
 			}
 		}
@@ -47,7 +47,9 @@ func CostEstimator(newOrderLocal chan<- bool) {
 				// beginCC3 := time.Now()
 				if floorState.Clear {
 					if elevID == Global.ID {
-						Node.Queue[floor] = false
+						Node.Queue[floor].Up = false
+						Node.Queue[floor].Down = false
+						Node.Queue[floor].Cab = false
 					}
 				} else if floorState.Up || floorState.Down {
 					bestCost := int(math.Inf(1))
@@ -100,7 +102,7 @@ func CostEstimator(newOrderLocal chan<- bool) {
 						}
 					}
 					if bestID == Global.ID {
-						Node.Queue[floor] = true
+						Node.Queue[floor] = floorState
 						newOrderLocal <- true
 					}
 				}
@@ -108,11 +110,11 @@ func CostEstimator(newOrderLocal chan<- bool) {
 				// fmt.Println("||||Calculation:\t",endCC3)
 			}
 			// endCC2 := time.Since(beginCC2)
-			// fmt.Println("|||Elevator loop:\t",endCC2)
+			// fmt.Println("|||Floor loop:\t",endCC2)
 		}
 		// endCC1 := time.Since(beginCC1)
 		// endTotal := time.Since(beginTotal)
-		// fmt.Println("||Floor loop:\t\t",endCC1)
+		// fmt.Println("||Elevator loop:\t\t",endCC1)
 		// fmt.Println("|Total:\t\t\t",endTotal)
 		// fmt.Println()
 	}
@@ -176,7 +178,9 @@ func KingOfOrders(btnsPressedLocal <-chan ButtonEvent, newPackets <-chan []byte,
 
 			/* Hack to ensure each elevator is not dependent on a full
 			   cost estimator run to clear order from queue */
-			Node.Queue[floor] = false
+			Node.Queue[floor].Up = false
+			Node.Queue[floor].Down = false
+			Node.Queue[floor].Cab = false
 			/* The following block might be superfluous when networks are introduced*/
 			/********************************************/
 			/* Remove all up/down orders if there is a clear present */

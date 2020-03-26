@@ -56,8 +56,6 @@ func main() {
 /*
 KNOWN BUGS:
 Jostein:
-	- fsm: Elevator does not care whether order at current floor is up/down
-		and stops regardsless. Most likely caused by orderInFront().
 	- fsm: Elevator does not stop and handle new order if order is at
 		elevator's current floor. Caused by PollFloorSensor() goroutine
 		which only sends floor on channel on change.

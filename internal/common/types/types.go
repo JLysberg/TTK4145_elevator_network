@@ -50,13 +50,13 @@ type NodeInfo struct {
 	Dir          MotorDirection
 	LastDir      MotorDirection
 	Floor        int
-	Queue        [config.MFloors]bool
+	Queue        [config.MFloors]FloorState
 	OnlineList   [config.NElevs]bool
 	ElevLastSent [config.NElevs]int
 }
 
 type GlobalInfo struct {
 	ID int
-	Nodes   [config.NElevs]NodeInfo //Could possibly be exchanged with an array
+	Nodes   [config.NElevs]NodeInfo
 	Orders  [config.MFloors][config.NElevs]FloorState
 }

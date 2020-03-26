@@ -21,8 +21,8 @@ type StateMachineChannels struct {
 }
 
 func orderInFront() bool {
-	for floor, order := range monitor.Node.Queue {
-		if order {
+	for floor, floorState := range monitor.Node.Queue {
+		if floorState.Cab || floorState.Up || floorState.Down {
 			diff := monitor.Node.Floor - floor
 			switch monitor.Node.LastDir {
 			case MD_Up:
@@ -40,8 +40,8 @@ func orderInFront() bool {
 }
 
 func orderAvailable() bool {
-	for _, order := range monitor.Node.Queue {
-		if order {
+	for _, floorState := range monitor.Node.Queue {
+		if floorState.Cab || floorState.Up || floorState.Down {
 			return true
 		}
 	}
@@ -70,6 +70,14 @@ func setNodeDirection() {
 	if dir != MD_Stop {
 		monitor.Node.LastDir = monitor.Node.Dir
 	}
+}
+
+func stopCriteria(floor int) bool {
+	floorState := monitor.Node.Queue[floor]
+	return floorState.Up && monitor.Node.Dir == MD_Up ||
+		floorState.Down && monitor.Node.Dir == MD_Down ||
+		(floorState.Down || floorState.Up) && !orderInFront() ||
+		floorState.Cab
 }
 
 func Printer() {
@@ -112,7 +120,7 @@ func Run(ch StateMachineChannels) {
 		case floor := <-ch.FloorSensor:
 			elevio.SetFloorIndicator(floor)
 			monitor.Node.Floor = floor
-			if monitor.Node.Queue[floor] {
+			if stopCriteria(floor) {
 				ch.ClearOrder <- floor
 				setNodeDirection()
 			}

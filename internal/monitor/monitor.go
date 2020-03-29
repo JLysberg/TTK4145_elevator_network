@@ -1,0 +1,244 @@
+package monitor
+
+import (
+	//"fmt"
+	"encoding/json"
+	"fmt"
+	"math"
+	"time"
+
+	/* Setup desc. in main */
+	"github.com/JLysberg/TTK4145_elevator_network/internal/common/config"
+	. "github.com/JLysberg/TTK4145_elevator_network/internal/common/types"
+	"github.com/JLysberg/TTK4145_elevator_network/pkg/elevio"
+)
+
+var Node = NodeInfo{
+	State:   ES_Init,
+	Dir:     MD_Stop,
+	LastDir: MD_Stop,
+	Floor:   0,
+}
+
+var Global = GlobalInfo{
+	ID: 0,
+}
+
+func CostEstimator(newOrderLocal chan<- bool) {
+	for {
+		time.Sleep(config.CostEstimator_UpdateRate)
+		// beginTotal := time.Now()
+		// beginPre := time.Now()
+		/* Pre-check for cab orders */
+		for floor, floorStates := range Global.Orders {
+			if floorStates[Global.ID].Cab && !floorStates[Global.ID].Clear{
+				Node.Queue[floor].Cab = true
+				newOrderLocal <- true
+			}
+		}
+		// endPre := time.Since(beginPre)
+		// fmt.Println("||Pre-check:\t\t", endPre)
+		// fmt.Println("|")
+		// beginCC1 := time.Now()
+		/* Cost calculation for non-cab orders */
+		for floor, floorStates := range Global.Orders {
+			// beginCC2 := time.Now()
+			for elevID, floorState := range floorStates {
+				// beginCC3 := time.Now()
+				if floorState.Clear {
+					if elevID == Global.ID {
+						Node.Queue[floor].Up = false
+						Node.Queue[floor].Down = false
+						Node.Queue[floor].Cab = false
+					}
+				} else if floorState.Up || floorState.Down {
+					bestCost := int(math.Inf(1))
+					bestID := 0
+					cost := 0
+					for nodeID, node := range Global.Nodes {
+						floorDiff := int(math.Abs(float64(node.Floor - floor)))
+
+						/*	Calculate floor distance cost
+							Distance	Cost
+							0			+0
+							1			+2
+							2			+3
+							..
+							M 			+(M + 1)
+						*/
+						if floorDiff != 0 {
+							cost += floorDiff + 1
+						}
+
+						/*	Calculate pass cost
+							Condition	Cost
+							Will pass	+0
+							Stopped		+1
+							Has passed	+5
+							NOTE: (Has passed includes case
+									of passing order in
+									opposite direction)
+						*/
+						switch node.Dir{
+						case MD_Down:
+							if floorDiff >= 0 && floorState.Down {
+								break
+							} else {
+								cost += 5
+							}
+						case MD_Up:
+							if floorDiff >= 0 && floorState.Up {
+								break
+							} else {
+								cost += 5
+							}
+						case MD_Stop:
+							cost += 1
+						}
+
+						if cost < bestCost {
+							bestCost = cost
+							bestID = nodeID
+						}
+					}
+					if bestID == Global.ID {
+						Node.Queue[floor] = floorState
+						newOrderLocal <- true
+					}
+				}
+				// endCC3 := time.Since(beginCC3)
+				// fmt.Println("||||Calculation:\t",endCC3)
+			}
+			// endCC2 := time.Since(beginCC2)
+			// fmt.Println("|||Floor loop:\t",endCC2)
+		}
+		// endCC1 := time.Since(beginCC1)
+		// endTotal := time.Since(beginTotal)
+		// fmt.Println("||Elevator loop:\t\t",endCC1)
+		// fmt.Println("|Total:\t\t\t",endTotal)
+		// fmt.Println()
+	}
+}
+
+func clearTimeout(floor int) {
+	Global.Orders[floor][Global.ID].Clear = true
+	timeout := time.NewTimer(config.ClearTimeout)
+	<-timeout.C
+	Global.Orders[floor][Global.ID].Clear = false
+}
+
+func KingOfOrders(btnsPressedLocal <-chan ButtonEvent, newPackets <-chan []byte,
+				  refreshButtonLights chan<- int, clearOrderLocal chan int) {
+	refreshButtonLights <- -1
+	for {
+		select {
+		case btn := <-btnsPressedLocal:
+			switch btn.Button {
+			case BT_HallUp:
+				Global.Orders[btn.Floor][Global.ID].Up = true
+			case BT_HallDown:
+				Global.Orders[btn.Floor][Global.ID].Down = true
+			case BT_Cab:
+				Global.Orders[btn.Floor][Global.ID].Cab = true
+			}
+			refreshButtonLights <- btn.Floor
+		case packet := <-newPackets:
+			var msg GlobalInfo
+			err := json.Unmarshal(packet, &msg)
+			if err != nil {
+				fmt.Println("Error with unmarshaling message in Monitor:", err)
+			}
+			/* Only update local Global.Orders if it differs from msg.Orders */
+			if msg.Orders != Global.Orders {
+				for msgFloor, msgFloorStates := range msg.Orders {
+					for msgElevID, msgFloorState := range msgFloorStates {
+						if !msgFloorState.Clear {
+							/* Concatenate orders from msg into local order matrix */
+							Global.Orders[msgFloor][msgElevID].Up =
+								Global.Orders[msgFloor][msgElevID].Up || msgFloorState.Up 		
+							Global.Orders[msgFloor][msgElevID].Down =
+								Global.Orders[msgFloor][msgElevID].Down || msgFloorState.Down
+							Global.Orders[msgFloor][msgElevID].Cab =
+								Global.Orders[msgFloor][msgElevID].Cab || msgFloorState.Cab
+						} else {
+							/* Remove all up/down orders if there is a clear present */
+							for elevID := 0; elevID < config.NElevs; elevID++ {
+								Global.Orders[msgFloor][elevID].Up = false
+								Global.Orders[msgFloor][elevID].Down = false
+							}
+							/* Also remove cab order if present */
+							Global.Orders[msgFloor][msgElevID].Cab = false
+						}
+					}
+				}
+				refreshButtonLights <- -1
+			}
+		case floor := <-clearOrderLocal:
+			go clearTimeout(floor)
+
+			/* Hack to ensure each elevator is not dependent on a full
+			   cost estimator run to clear order from queue */
+			Node.Queue[floor].Up = false
+			Node.Queue[floor].Down = false
+			Node.Queue[floor].Cab = false
+			/* The following block might be superfluous when networks are introduced*/
+			/********************************************/
+			/* Remove all up/down orders if there is a clear present */
+			for elevID := 0; elevID < config.NElevs; elevID++ {
+				Global.Orders[floor][elevID].Up = false
+				Global.Orders[floor][elevID].Down = false
+			}
+			/* Also remove cab order if present */
+			Global.Orders[floor][Global.ID].Cab = false
+			/*********************************************/
+
+			refreshButtonLights <- floor
+		}
+	}
+}
+
+/*
+Updates every button light in accordance with the global order matrix
+on refresh call
+*/
+func LightSetter(refresh <-chan int) {
+	for {
+		floor := <-refresh
+		// Really bad code quality, but this works for now :)
+		if floor != -1 {
+			for elevID := 0; elevID < config.NElevs; elevID++ {
+				for button := BT_HallUp; button <= BT_Cab; button++ {
+					lightValue := false
+					switch button {
+					case BT_HallUp:
+						lightValue = Global.Orders[floor][elevID].Up
+					case BT_HallDown:
+						lightValue = Global.Orders[floor][elevID].Down
+					case BT_Cab:
+						lightValue = Global.Orders[floor][elevID].Cab &&
+							elevID == Global.ID
+					}
+					elevio.SetButtonLamp(button, floor, lightValue)
+				}
+			}
+		} else {
+			for floor := 0; floor < config.MFloors; floor++ {
+				for elevID := 0; elevID < config.NElevs; elevID++ {
+					for button := BT_HallUp; button <= BT_Cab; button++ {
+						lightValue := false
+						switch button {
+						case BT_HallUp:
+							lightValue = Global.Orders[floor][elevID].Up
+						case BT_HallDown:
+							lightValue = Global.Orders[floor][elevID].Down
+						case BT_Cab:
+							lightValue = Global.Orders[floor][elevID].Cab &&
+								elevID == Global.ID
+						}
+						elevio.SetButtonLamp(button, floor, lightValue)
+					}
+				}
+			}
+		}
+	}
+}

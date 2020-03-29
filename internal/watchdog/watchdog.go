@@ -3,13 +3,11 @@ package watchdog
 import (
 	"fmt"
 	"time"
-
-	/* GOPATH setup */
 	"encoding/json"
 
-	. "internal/common/config"
-	. "internal/common/types"
-	//"pkg/elevio"
+	/* Setup desc. in main */
+	. "github.com/JLysberg/TTK4145_elevator_network/internal/common/types"
+	"github.com/JLysberg/TTK4145_elevator_network/internal/common/config"
 )
 
 func UpdateWatchdog(newPackets chan packetReceiver){

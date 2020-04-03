@@ -6,11 +6,16 @@ import (
 	"encoding/json"
 
 	/* Setup desc. in main */
-	. "github.com/JLysberg/TTK4145_elevator_network/internal/common/types"
+/*	. "github.com/JLysberg/TTK4145_elevator_network/internal/common/types"
 	"github.com/JLysberg/TTK4145_elevator_network/internal/common/config"
+*/
+	. "../common/types"
+	"../common/config"
 )
 
-func UpdateWatchdog(newPackets chan packetReceiver){
+
+//Take use of the functions in network/peers! 
+func UpdateElevLastSent(newPackets chan packetReceiver){
 	select{
 		case packet := <- newPackets
 				var msg types.GlobalInfo
@@ -23,16 +28,23 @@ func UpdateWatchdog(newPackets chan packetReceiver){
 			}
 		}
 	}
+}
 
-	for i := 0; i < config.NElevs; i++{
-		if (time.Now() - types.NodeInfo.ElevLastSent[i]) < 3 * time.Second(){
-			types.NodeInfo.OnlineList[i] = 1
-		}
-		else{
-			types.NodeInfo.OnlineList[i] = 0
+func UpdateOnlineList(newPackets chan packetReceiver){
+	for {
+		for i := 0; i < config.NElevs; i++{
+			if (time.Now() - types.NodeInfo.ElevLastSent[i]) < 3 * time.Second(){
+				types.NodeInfo.OnlineList[i] = 1
+			}
+			else{
+				types.NodeInfo.OnlineList[i] = 0
+			}
 		}
 	}
 }
+
+
+
 
 /*
 func AmIOffline(id int){

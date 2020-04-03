@@ -5,7 +5,9 @@ import (
 	// "../config"
 
 	/* Setup desc. in main */
-	"github.com/JLysberg/TTK4145_elevator_network/internal/common/config"
+	//"github.com/JLysberg/TTK4145_elevator_network/internal/common/config"
+	
+	"../config"
 )
 
 type MotorDirection int
@@ -51,12 +53,14 @@ type NodeInfo struct {
 	LastDir      MotorDirection
 	Floor        int
 	Queue        [config.MFloors]FloorState
-	OnlineList   [config.NElevs]bool
-	ElevLastSent [config.NElevs]int
+	//OnlineList   [config.NElevs]bool
+	//ElevLastSent [config.NElevs]int
 }
 
 type GlobalInfo struct {
-	ID int
-	Nodes   [config.NElevs]NodeInfo
-	Orders  [config.MFloors][config.NElevs]FloorState
+	//TestString string
+	ID     int
+	Nodes  [config.NElevs]NodeInfo
+	Orders [config.MFloors][config.NElevs]FloorState
 }
+

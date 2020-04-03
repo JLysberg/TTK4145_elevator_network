@@ -1,16 +1,21 @@
 package monitor
 
 import (
-	//"fmt"
-	"encoding/json"
 	"fmt"
+	
 	"math"
 	"time"
 
 	/* Setup desc. in main */
-	"github.com/JLysberg/TTK4145_elevator_network/internal/common/config"
+/*	"github.com/JLysberg/TTK4145_elevator_network/internal/common/config"
 	. "github.com/JLysberg/TTK4145_elevator_network/internal/common/types"
 	"github.com/JLysberg/TTK4145_elevator_network/pkg/elevio"
+*/
+
+	"../common/config"
+	. "../common/types"
+	"../../pkg/elevio"
+
 )
 
 var Node = NodeInfo{
@@ -18,11 +23,14 @@ var Node = NodeInfo{
 	Dir:     MD_Stop,
 	LastDir: MD_Stop,
 	Floor:   0,
+	//Queue: [MFloors {false, false, false, false}]
 }
 
 var Global = GlobalInfo{
+	//TestString: "Hello from:",
 	ID: 0,
 }
+
 
 func CostEstimator(newOrderLocal chan<- bool) {
 	for {
@@ -31,7 +39,7 @@ func CostEstimator(newOrderLocal chan<- bool) {
 		// beginPre := time.Now()
 		/* Pre-check for cab orders */
 		for floor, floorStates := range Global.Orders {
-			if floorStates[Global.ID].Cab && !floorStates[Global.ID].Clear{
+			if floorStates[Global.ID].Cab && !floorStates[Global.ID].Clear {
 				Node.Queue[floor].Cab = true
 				newOrderLocal <- true
 			}
@@ -79,7 +87,7 @@ func CostEstimator(newOrderLocal chan<- bool) {
 									of passing order in
 									opposite direction)
 						*/
-						switch node.Dir{
+						switch node.Dir {
 						case MD_Down:
 							if floorDiff >= 0 && floorState.Down {
 								break
@@ -127,12 +135,13 @@ func clearTimeout(floor int) {
 	Global.Orders[floor][Global.ID].Clear = false
 }
 
-func KingOfOrders(btnsPressedLocal <-chan ButtonEvent, newPackets <-chan []byte,
-				  refreshButtonLights chan<- int, clearOrderLocal chan int) {
+func KingOfOrders(btnsPressedLocal <-chan ButtonEvent, newPackets <-chan GlobalInfo,
+	refreshButtonLights chan<- int, clearOrderLocal chan int) {
 	refreshButtonLights <- -1
 	for {
 		select {
 		case btn := <-btnsPressedLocal:
+			fmt.Printf("Got a new buttonpress order")
 			switch btn.Button {
 			case BT_HallUp:
 				Global.Orders[btn.Floor][Global.ID].Up = true
@@ -142,20 +151,18 @@ func KingOfOrders(btnsPressedLocal <-chan ButtonEvent, newPackets <-chan []byte,
 				Global.Orders[btn.Floor][Global.ID].Cab = true
 			}
 			refreshButtonLights <- btn.Floor
-		case packet := <-newPackets:
-			var msg GlobalInfo
-			err := json.Unmarshal(packet, &msg)
-			if err != nil {
-				fmt.Println("Error with unmarshaling message in Monitor:", err)
-			}
+		case msg := <-newPackets:
+
 			/* Only update local Global.Orders if it differs from msg.Orders */
-			if msg.Orders != Global.Orders {
+			if msg.Orders != Global.Orders && msg.ID != Global.ID{
+				fmt.Printf("Got a new order from the network")
+			
 				for msgFloor, msgFloorStates := range msg.Orders {
 					for msgElevID, msgFloorState := range msgFloorStates {
 						if !msgFloorState.Clear {
 							/* Concatenate orders from msg into local order matrix */
 							Global.Orders[msgFloor][msgElevID].Up =
-								Global.Orders[msgFloor][msgElevID].Up || msgFloorState.Up 		
+								Global.Orders[msgFloor][msgElevID].Up || msgFloorState.Up
 							Global.Orders[msgFloor][msgElevID].Down =
 								Global.Orders[msgFloor][msgElevID].Down || msgFloorState.Down
 							Global.Orders[msgFloor][msgElevID].Cab =

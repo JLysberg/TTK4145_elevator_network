@@ -1,6 +1,9 @@
 package config
 
-import "time"
+import (
+	"time"
+)
+
 
 const (
 	CostEstimator_UpdateRate = 500 * time.Millisecond
@@ -8,5 +11,5 @@ const (
 	ClearTimeout = 1 * time.Second
 
 	MFloors = 4
-	NElevs  = 1
+	NElevs  = 2
 )

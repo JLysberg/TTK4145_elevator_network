@@ -5,9 +5,16 @@ import (
 	"time"
 
 	/* Setup desc. in main*/
+	/*
 	. "github.com/JLysberg/TTK4145_elevator_network/internal/common/types"
 	"github.com/JLysberg/TTK4145_elevator_network/internal/monitor"
 	"github.com/JLysberg/TTK4145_elevator_network/pkg/elevio"
+	*/
+
+	. "../common/types"
+	"../monitor"
+	"../../pkg/elevio"
+
 )
 
 type StateMachineChannels struct {
@@ -17,7 +24,7 @@ type StateMachineChannels struct {
 	NewOrder             chan bool
 	PacketReceiver       chan []byte
 	ButtonLights_Refresh chan int
-	ClearOrder          chan int
+	ClearOrder           chan int
 }
 
 func orderInFront() bool {
@@ -61,7 +68,7 @@ func calculateDirection() MotorDirection {
 }
 
 func setNodeDirection() {
-	/* Minor delay to allow cost estimator to evaluate orders 
+	/* Minor delay to allow cost estimator to evaluate orders
 	   CONSIDER USING SEMAPHORES */
 	time.Sleep(1 * time.Nanosecond)
 	dir := calculateDirection()

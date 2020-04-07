@@ -14,10 +14,11 @@ type StateMachineChannels struct {
 	ButtonPress          chan ButtonEvent
 	FloorSensor          chan int
 	ObstructionSwitch    chan bool
-	NewOrder             chan bool
+	NewOrder             chan int
 	PacketReceiver       chan []byte
 	ButtonLights_Refresh chan int
-	ClearOrder          chan int
+	ClearOrder           chan int
+	DoorTimeout			 chan bool
 }
 
 func orderInFront() bool {
@@ -52,23 +53,35 @@ func calculateDirection() MotorDirection {
 	if orderAvailable() {
 		if orderInFront() {
 			return monitor.Node.LastDir
-		} else {
-			return -1 * monitor.Node.LastDir
 		}
-	} else {
-		return MD_Stop
+		return -1 * monitor.Node.LastDir
 	}
+	return MD_Stop
 }
 
-func setNodeDirection() {
-	/* Minor delay to allow cost estimator to evaluate orders 
+func setNodeDirection(doorOpen <-chan bool) {
+	/* Minor delay to allow cost estimator to evaluate orders
 	   CONSIDER USING SEMAPHORES */
 	time.Sleep(1 * time.Nanosecond)
 	dir := calculateDirection()
+
+	/* Safety loop to ensure direction is never changed while door is open */
+	if monitor.Node.State == ES_Stop {
+		safety:
+			for {
+				select {
+				case <-doorOpen:
+					break safety
+			}
+		}
+	}
+
 	elevio.SetMotorDirection(dir)
 	monitor.Node.Dir = dir
 	if dir != MD_Stop {
 		monitor.Node.LastDir = monitor.Node.Dir
+	} else {
+		monitor.Node.State = ES_Run
 	}
 }
 
@@ -105,28 +118,54 @@ func elev_Init(floorSensor <-chan int) {
 
 func Run(ch StateMachineChannels) {
 	elev_Init(ch.FloorSensor)
+	doorTimeout := time.NewTimer(3 * time.Second)
+	doorTimeout.Stop()
+
+	/* NEEDS REFACTORING */
 	for {
 		select {
-		case <-ch.NewOrder:
+		case floor := <-ch.NewOrder:
 			switch monitor.Node.State {
-			case ES_Stop:
-				fallthrough
-			case ES_Idle:
-				//TODO: jdfksjldfk
+			case ES_Stop, ES_Idle:
+				if floor == monitor.Node.Floor {
+					ch.ClearOrder <- floor
+					monitor.Node.State = ES_Stop
+					doorTimeout.Reset(3 * time.Second)
+					elevio.SetDoorOpenLamp(true)
+				} else {
+					go setNodeDirection(ch.DoorTimeout)
+				}
 			case ES_Run:
-				//TODO
+				go setNodeDirection(ch.DoorTimeout)
 			}
-			setNodeDirection()
 		case floor := <-ch.FloorSensor:
-			elevio.SetFloorIndicator(floor)
+			go elevio.SetFloorIndicator(floor)
 			monitor.Node.Floor = floor
 			if stopCriteria(floor) {
 				ch.ClearOrder <- floor
-				setNodeDirection()
+				elevio.SetMotorDirection(MD_Stop)
+				monitor.Node.Dir = MD_Stop
+				monitor.Node.State = ES_Stop
+				doorTimeout.Reset(3 * time.Second)
+				elevio.SetDoorOpenLamp(true)
+				go setNodeDirection(ch.DoorTimeout)
+			}
+		case <-doorTimeout.C:
+			elevio.SetDoorOpenLamp(false)
+			ch.DoorTimeout <- true
+			if !orderAvailable() {
+				monitor.Node.State = ES_Idle
+			} else {
+				monitor.Node.State = ES_Run
+			}
+		case on := <-ch.ObstructionSwitch:
+			if monitor.Node.State == ES_Stop {
+				if on {
+					doorTimeout.Reset(1000 * time.Second)
+				} else {
+					doorTimeout.Reset(3 * time.Second)
+				}
 			}
 		}
 	}
 }
-
-//TODO: Add door/obstruction timer
-//TODO: Network

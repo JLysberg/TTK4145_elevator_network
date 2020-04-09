@@ -57,13 +57,14 @@ func main() {
 
 	ch := fsm.StateMachineChannels{
 		ButtonPress:          make(chan ButtonEvent),
-		NewOrder:             make(chan bool),
+		NewOrder:             make(chan int),
 		FloorSensor:          make(chan int),
 		ObstructionSwitch:    make(chan bool),
 		//PacketReceiver:   	  make(chan GlobalInfo),
 		//PacketSender:     	  make(chan GlobalInfo),
 		ButtonLights_Refresh: make(chan int),
 		ClearOrder:           make(chan int),
+		DoorTimeout: 		  make(chan bool),
 	}
 
 	var(

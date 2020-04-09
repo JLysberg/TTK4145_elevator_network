@@ -19,7 +19,7 @@ import (
 )
 
 var Node = NodeInfo{
-	State:   ES_Init,
+	State:   ES_Idle,
 	Dir:     MD_Stop,
 	LastDir: MD_Stop,
 	Floor:   0,
@@ -31,8 +31,7 @@ var Global = GlobalInfo{
 	ID: 0,
 }
 
-
-func CostEstimator(newOrderLocal chan<- bool) {
+func CostEstimator(newOrderLocal chan<- int) {
 	for {
 		time.Sleep(config.CostEstimator_UpdateRate)
 		// beginTotal := time.Now()
@@ -41,7 +40,7 @@ func CostEstimator(newOrderLocal chan<- bool) {
 		for floor, floorStates := range Global.Orders {
 			if floorStates[Global.ID].Cab && !floorStates[Global.ID].Clear {
 				Node.Queue[floor].Cab = true
-				newOrderLocal <- true
+				newOrderLocal <- floor
 			}
 		}
 		// endPre := time.Since(beginPre)
@@ -109,9 +108,9 @@ func CostEstimator(newOrderLocal chan<- bool) {
 							bestID = nodeID
 						}
 					}
-					if bestID == Global.ID {
+					if bestID == Global.ID && Node.Queue[floor] != floorState {
 						Node.Queue[floor] = floorState
-						newOrderLocal <- true
+						newOrderLocal <- floor
 					}
 				}
 				// endCC3 := time.Since(beginCC3)

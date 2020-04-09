@@ -34,10 +34,9 @@ type ButtonEvent struct {
 type ElevatorState int
 
 const (
-	ES_Init ElevatorState = 0
-	ES_Idle               = 1
-	ES_Run                = 2
-	ES_Stop               = 3
+	ES_Idle ElevatorState = 0
+	ES_Run                = 1
+	ES_Stop               = 2
 )
 
 type FloorState struct {
@@ -58,7 +57,6 @@ type NodeInfo struct {
 }
 
 type GlobalInfo struct {
-	//TestString string
 	ID     int
 	Nodes  [config.NElevs]NodeInfo
 	Orders [config.MFloors][config.NElevs]FloorState

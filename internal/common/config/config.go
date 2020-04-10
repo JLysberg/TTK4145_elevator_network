@@ -11,5 +11,5 @@ const (
 	ClearTimeout = 1 * time.Second
 
 	MFloors = 4
-	NElevs  = 2
+	NElevs  = 1
 )

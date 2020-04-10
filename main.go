@@ -83,6 +83,8 @@ func main() {
 	go elevio.PollObstructionSwitch(ch.ObstructionSwitch)
 
 	go fsm.Run(ch)
+	
+	
    
 	// We define some custom struct to send over the network.
 	// Note that all members we want to transmit must be public. Any private members
@@ -96,11 +98,11 @@ func main() {
 
 	// Our id can be anything. Here we pass it on the command line, using
 	//  `go run main.go -id=our_id`
-	/*
-	var id string
-	flag.StringVar(&id, "id", "", "id of this peer")
-	flag.Parse()
-	*/
+	
+	//var id string
+	//flag.StringVar(&id, "id", "", "id of this peer")
+	//flag.Parse()
+	
 
 	// ... or alternatively, we can use the local IP address.
 	// (But since we can run multiple programs on the same PC, we also append the
@@ -138,29 +140,18 @@ func main() {
 	go bcast.Transmitter(30025, GlobalInfoTx)
 	go bcast.Receiver(30025, GlobalInfoRx)
 	//16569
-	// The example message. We just send one of these every second.
-	
-	//monitor.Global.TestString = "Hello from "
 
-	//sendGlobal := GlobalInfo{"Hello from ", monitor.Global.ID, monitor.Global.Nodes, monitor.Global.Orders}
-		//sendGlobal := Global
-		
-
-			//helloMsg.Iter++
-			//helloTx <- helloMsg
-		
-	go func() {
+	//go func() {
 		for {
-			//fmt.Printf(monitor.Global.TestString, monitor.Global.ID)
 			
 			GlobalInfoTx <- monitor.Global			
 			time.Sleep(500 * time.Millisecond)	
 		}
-	}()
+	//}()
 
 
 	fmt.Println("Started")
-	go func() {
+/*	go func() {
 		for {
 			select {
 			case p := <-peerUpdateCh:
@@ -172,13 +163,13 @@ func main() {
 			//case a := <-helloRx:
 				//fmt.Printf("Received: %#v\n", a)
 			
-			case m := <- GlobalInfoRx:
+			//case m := <- GlobalInfoRx:
 				
-				fmt.Printf("Received GlobalInfo: %#v\n", m.ID)
-			}
+			//	fmt.Printf("Received GlobalInfo: %#v\n", m.ID)
+			//}
 		}
 	}()
-
+*/
 	select {}
 }
 

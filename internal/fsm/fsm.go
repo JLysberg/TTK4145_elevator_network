@@ -59,30 +59,36 @@ func calculateDirection() MotorDirection {
 	return MD_Stop
 }
 
+var thID = 0
 func setNodeDirection(doorOpen <-chan bool) {
 	/* Minor delay to allow cost estimator to evaluate orders
 	   CONSIDER USING SEMAPHORES */
+	id := thID
+	thID += 1
 	time.Sleep(1 * time.Nanosecond)
 	dir := calculateDirection()
+	fmt.Println("setNodeThread", id, "begin")
 
 	/* Safety loop to ensure direction is never changed while door is open */
 	if monitor.Node.State == ES_Stop {
+		fmt.Println("setNodeThread", id, "halt")
 		safety:
 			for {
 				select {
 				case <-doorOpen:
 					break safety
+				}
 			}
-		}
 	}
 
 	elevio.SetMotorDirection(dir)
 	monitor.Node.Dir = dir
 	if dir != MD_Stop {
 		monitor.Node.LastDir = monitor.Node.Dir
-	} else {
 		monitor.Node.State = ES_Run
+		fmt.Println("Setting ES_Run")
 	}
+	fmt.Println("setNodeThread", id, "end")
 }
 
 func stopCriteria(floor int) bool {
@@ -95,15 +101,17 @@ func stopCriteria(floor int) bool {
 
 func Printer() {
 	for {
-		time.Sleep(1 * time.Second)
+		time.Sleep(1 * time.Millisecond)
 
-		for _, floorStates := range monitor.Global.Orders {
-			for _, floorState := range floorStates {
-				fmt.Println("*", floorState)
-			}
-		}
-		fmt.Println("#", monitor.Node.Queue)
-		fmt.Println()
+		// for _, floorStates := range monitor.Global.Orders {
+		// 	for _, floorState := range floorStates {
+		// 		fmt.Println("*", floorState)
+		// 	}
+		// }
+		// fmt.Println("#", monitor.Node.Queue)
+		// fmt.Println()
+
+		fmt.Println("State:", monitor.Node.State)
 	}
 }
 
@@ -155,6 +163,7 @@ func Run(ch StateMachineChannels) {
 			ch.DoorTimeout <- true
 			if !orderAvailable() {
 				monitor.Node.State = ES_Idle
+				fmt.Println("Setting ES_Idle")
 			} else {
 				monitor.Node.State = ES_Run
 			}

@@ -44,7 +44,18 @@ type FloorState struct {
 	Clear bool
 }
 
-type NodeInfo struct {
+type NodeChannels struct {
+	ButtonPress       chan ButtonEvent
+	FloorSensor       chan int
+	ObstructionSwitch chan bool
+	NewOrder          chan int
+	PacketReceiver    chan []byte
+	LightRefresh      chan int
+	ClearOrder        chan int
+	DoorTimeout		  chan bool
+}
+
+type LocalInfo struct {
 	State        ElevatorState
 	Dir          MotorDirection
 	LastDir      MotorDirection
@@ -56,6 +67,6 @@ type NodeInfo struct {
 
 type GlobalInfo struct {
 	ID     int
-	Nodes  [config.NElevs]NodeInfo
+	Nodes  [config.NElevs]LocalInfo
 	Orders [config.MFloors][config.NElevs]FloorState
 }

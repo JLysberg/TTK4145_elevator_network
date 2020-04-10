@@ -59,36 +59,35 @@ func calculateDirection() MotorDirection {
 	return MD_Stop
 }
 
-var thID = 0
+var runningInstance = false
 func setNodeDirection(doorOpen <-chan bool) {
 	/* Minor delay to allow cost estimator to evaluate orders
 	   CONSIDER USING SEMAPHORES */
-	id := thID
-	thID += 1
+	if runningInstance {
+		return
+	}
+	runningInstance = true
 	time.Sleep(1 * time.Nanosecond)
-	dir := calculateDirection()
-	fmt.Println("setNodeThread", id, "begin")
-
+	
 	/* Safety loop to ensure direction is never changed while door is open */
 	if monitor.Node.State == ES_Stop {
-		fmt.Println("setNodeThread", id, "halt")
 		safety:
-			for {
-				select {
-				case <-doorOpen:
-					break safety
-				}
+		for {
+			select {
+			case <-doorOpen:
+				break safety
 			}
+		}
 	}
-
+	
+	dir := calculateDirection()
 	elevio.SetMotorDirection(dir)
 	monitor.Node.Dir = dir
 	if dir != MD_Stop {
 		monitor.Node.LastDir = monitor.Node.Dir
 		monitor.Node.State = ES_Run
-		fmt.Println("Setting ES_Run")
 	}
-	fmt.Println("setNodeThread", id, "end")
+	runningInstance = false
 }
 
 func stopCriteria(floor int) bool {
@@ -156,6 +155,7 @@ func Run(ch StateMachineChannels) {
 				monitor.Node.State = ES_Stop
 				doorTimeout.Reset(3 * time.Second)
 				elevio.SetDoorOpenLamp(true)
+				/* Run thread to set direction after door has timed out */
 				go setNodeDirection(ch.DoorTimeout)
 			}
 		case <-doorTimeout.C:
@@ -163,7 +163,6 @@ func Run(ch StateMachineChannels) {
 			ch.DoorTimeout <- true
 			if !orderAvailable() {
 				monitor.Node.State = ES_Idle
-				fmt.Println("Setting ES_Idle")
 			} else {
 				monitor.Node.State = ES_Run
 			}

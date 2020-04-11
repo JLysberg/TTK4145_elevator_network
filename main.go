@@ -58,10 +58,6 @@ func main() {
 
 /*
 TODO:
-Jostein:
-	- fsm/monitor: Semaphore integration between order clearance in monitor and
-		setDirection in fsm
-
 	- network
 	- watchdog: lookup table integration with network
 */

@@ -1,9 +1,7 @@
 package node
 
 import (
-	"time"
-
-	/* Setup desc. in main*/
+	/* Setup desc. in main */
 	"github.com/JLysberg/TTK4145_elevator_network/internal/common/config"
 	. "github.com/JLysberg/TTK4145_elevator_network/internal/common/types"
 	"github.com/JLysberg/TTK4145_elevator_network/internal/monitor"
@@ -56,9 +54,6 @@ func setDirection(doorOpen <-chan bool) {
 		return
 	}
 	setDirectionInstance = true
-	/*	Minor delay to allow cost estimator to evaluate orders
-		CONSIDER USING SEMAPHORES */
-	time.Sleep(1 * time.Nanosecond)
 	/*	Safety loop to ensure direction is never changed while door is open */
 	if monitor.Local.State == ES_Stop {
 	safety:

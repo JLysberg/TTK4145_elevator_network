@@ -6,6 +6,7 @@ import (
 	"math"
 	"time"
 
+	/* Setup desc. in main */
 	"github.com/JLysberg/TTK4145_elevator_network/internal/common/config"
 	. "github.com/JLysberg/TTK4145_elevator_network/internal/common/types"
 	"github.com/JLysberg/TTK4145_elevator_network/pkg/elevio"
@@ -106,18 +107,16 @@ func CostEstimator(updateQueue chan<- int) {
 				}
 			}
 		}
-		/*	Calculate runtime and sleep if runtime is less than updaterate */
+		/*	Calculate runtime and sleep if runtime is less than update rate */
 		estRuntime := time.Since(estBegin)
 		if estRuntime < config.UpdateRate {
 			time.Sleep(config.UpdateRate - estRuntime)
 		}
-
-		fmt.Println("estRuntime:", estRuntime)
 	}
 }
 
 /*	OrderServer handles all incoming orders. This includes all new local orders 
-	as well as incoming network packets. The responsibility ofOrderServerr is 
+	as well as incoming network packets. The responsibility of OrderServer is 
 	to guarantee that Global.Orders is always up to date with the rest of the network */
 func OrderServer(buttonPress <-chan ButtonEvent, newPackets <-chan []byte,
 				  lightRefresh chan<- int, clearOrder <-chan int) {

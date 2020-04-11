@@ -107,7 +107,7 @@ func stopCriteria(floor int) bool {
 
 func Printer() {
 	for {
-		time.Sleep(1 * time.Second)
+		time.Sleep(2 * time.Second)
 
 		for _, floorStates := range monitor.Global.Orders {
 			for _, floorState := range floorStates {

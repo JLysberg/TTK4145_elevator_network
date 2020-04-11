@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 	"strconv"
-	//"time"
+	"time"
 	"fmt"
 	"os"
 
@@ -75,7 +75,7 @@ func main() {
 
 	go monitor.CostEstimator(ch.NewOrder)
 	go monitor.KingOfOrders(ch.ButtonPress, GlobalInfoRx,
-		ch.ButtonLights_Refresh, ch.ClearOrder, GlobalInfoTx)
+		ch.ButtonLights_Refresh, ch.ClearOrder)
 	go monitor.LightSetter(ch.ButtonLights_Refresh)
 
 	go elevio.PollButtons(ch.ButtonPress)
@@ -119,11 +119,12 @@ func main() {
 	go bcast.Receiver(30025, GlobalInfoRx)
 	//16569
 
-//	go func() {
-//		for {			
-//			time.Sleep(500 * time.Millisecond)	
-//		}
-//	}()
+	go func() {
+		for {
+			GlobalInfoTx <- monitor.Global			
+			time.Sleep(2 * time.Second)	
+		}
+	}()
 
 	select {}
 }

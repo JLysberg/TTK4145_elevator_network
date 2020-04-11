@@ -136,7 +136,7 @@ func clearTimeout(floor int) {
 }
 
 func KingOfOrders(btnsPressedLocal <-chan ButtonEvent, newPackets <-chan GlobalInfo,
-	refreshButtonLights chan<- int, clearOrderLocal chan int, sendPackets chan<- GlobalInfo) {
+	refreshButtonLights chan<- int, clearOrderLocal chan int) {
 	refreshButtonLights <- -1
 	for {
 		select {
@@ -151,7 +151,6 @@ func KingOfOrders(btnsPressedLocal <-chan ButtonEvent, newPackets <-chan GlobalI
 			}
 			refreshButtonLights <- btn.Floor
 			fmt.Println("I refreshed my lights after getting a button order")
-			sendPackets <- Global
 
 		case msg := <-newPackets:
 
@@ -181,7 +180,6 @@ func KingOfOrders(btnsPressedLocal <-chan ButtonEvent, newPackets <-chan GlobalI
 				}
 				refreshButtonLights <- -1
 				fmt.Println("I refreshed my lights after getting a network order")
-				sendPackets <- Global
 			}
 		case floor := <-clearOrderLocal:
 			go clearTimeout(floor)
@@ -204,7 +202,6 @@ func KingOfOrders(btnsPressedLocal <-chan ButtonEvent, newPackets <-chan GlobalI
 
 			refreshButtonLights <- floor
 			fmt.Println("I refreshed my lights after clearing orders")
-			sendPackets <- Global
 		}
 	}
 }

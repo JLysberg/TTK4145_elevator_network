@@ -60,14 +60,17 @@ func CostEstimator(updateQueue chan<- int) {
 						Local.Queue[floor].Cab = false
 					}
 				} else if floorState.Up || floorState.Down {
-					// fmt.Println("calculating")
 					bestCost := int(math.Inf(1))
 					bestID := 0
 					cost := 0
 					for nodeID, node := range Global.Nodes {
-						floorDiff := int(math.Abs(float64(node.Floor - floor)))
+						/*	Ignore all offline nodes */
+						if !Local.OnlineList[nodeID] {
+							continue
+						}
 
 						/*	Calculate distance cost */
+						floorDiff := int(math.Abs(float64(node.Floor - floor)))
 						if floorDiff != 0 {
 							cost += floorDiff + 1
 						}
@@ -81,7 +84,7 @@ func CostEstimator(updateQueue chan<- int) {
 								cost += 5
 							}
 						case MD_Up:
-							if floorDiff >= 0 && floorState.Up {
+							if floorDiff <= 0 && floorState.Up {
 								break
 							} else {
 								cost += 5

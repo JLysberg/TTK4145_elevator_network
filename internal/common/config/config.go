@@ -6,9 +6,10 @@ import (
 
 
 const (
-	CostEstimator_UpdateRate = 500 * time.Millisecond
+	UpdateRate = 500 * time.Millisecond
 
 	ClearTimeout = 1 * time.Second
+	DoorTimeout = 3 * time.Second
 
 	MFloors = 4
 	NElevs  = 2

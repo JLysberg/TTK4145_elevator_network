@@ -16,8 +16,8 @@ import (
 
 	"github.com/JLysberg/TTK4145_elevator_network/internal/common/config"
 	. "github.com/JLysberg/TTK4145_elevator_network/internal/common/types"
-	"github.com/JLysberg/TTK4145_elevator_network/internal/fsm"
 	"github.com/JLysberg/TTK4145_elevator_network/internal/monitor"
+	"github.com/JLysberg/TTK4145_elevator_network/internal/node"
 	"github.com/JLysberg/TTK4145_elevator_network/pkg/elevio"
 	*/
 	//"./internal/network_handler"
@@ -46,6 +46,7 @@ func main() {
 	flag.StringVar(&port, "port", "15657", "init port")
 	flag.Parse()
 	ID, _ := strconv.Atoi(id)
+	ID = 0
 	monitor.Global.ID = ID
 
 	elevio.Init("localhost:"+port, config.MFloors)
@@ -65,6 +66,15 @@ func main() {
 		ButtonLights_Refresh: make(chan int),
 		ClearOrder:           make(chan int),
 		DoorTimeout: 		  make(chan bool),
+	ch := NodeChannels{
+		ButtonPress:       make(chan ButtonEvent),
+		UpdateQueue:          make(chan int),
+		FloorSensor:       make(chan int),
+		ObstructionSwitch: make(chan bool),
+		PacketReceiver:    make(chan []byte),
+		LightRefresh:      make(chan int),
+		ClearOrder:        make(chan int),
+		DoorTimeout:       make(chan bool),
 	}
 
 	var(
@@ -72,11 +82,17 @@ func main() {
 		GlobalInfoRx = make(chan GlobalInfo)
 	)
 //	go fsm.Printer()
+	go node.Initialize(ch.FloorSensor, ch.LightRefresh)
+	// go node.Printer()
 
 	go monitor.CostEstimator(ch.NewOrder)
 	go monitor.KingOfOrders(ch.ButtonPress, GlobalInfoRx,
 		ch.ButtonLights_Refresh, ch.ClearOrder)
 	go monitor.LightSetter(ch.ButtonLights_Refresh)
+	go monitor.CostEstimator(ch.UpdateQueue)
+	go monitor.OrderServer(ch.ButtonPress, ch.PacketReceiver,
+		ch.LightRefresh, ch.ClearOrder)
+	go monitor.LightServer(ch.LightRefresh)
 
 	go elevio.PollButtons(ch.ButtonPress)
 	go elevio.PollFloorSensor(ch.FloorSensor)
@@ -127,6 +143,7 @@ func main() {
 	}()
 
 	select {}
+	node.ElevatorServer(ch)
 }
 	//fmt.Println("Started")
 /*	go func() {
@@ -152,21 +169,10 @@ func main() {
 
 
 /*
-KNOWN BUGS:
-Jostein:
-	- fsm: Elevator does not stop and handle new order if order is at
-		elevator's current floor. Caused by PollFloorSensor() goroutine
-		which only sends floor on channel on change.
-
 TODO:
 Jostein:
-	- monitor: Split cost estimator into sereral threads to improve performance.
-		Current run time with one elevator and all orders present is about ~2s,
-		which is unacceptable and will introduce problems later.
-	- fsm: Implement obstruction timer
 	- fsm/monitor: Semaphore integration between order clearance in monitor and
 		setDirection in fsm
-	- monitor: watchdog lookup table in cost estimator
 
 	- network
 	- watchdog: lookup table integration with network

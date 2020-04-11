@@ -71,7 +71,7 @@ func main() {
 		GlobalInfoTx = make(chan GlobalInfo)
 		GlobalInfoRx = make(chan GlobalInfo)
 	)
-	go fsm.Printer()
+//	go fsm.Printer()
 
 	go monitor.CostEstimator(ch.NewOrder)
 	go monitor.KingOfOrders(ch.ButtonPress, GlobalInfoRx,
@@ -122,7 +122,7 @@ func main() {
 	go func() {
 		for {
 			GlobalInfoTx <- monitor.Global			
-			time.Sleep(2 * time.Second)	
+			time.Sleep(1 * time.Second)	
 		}
 	}()
 

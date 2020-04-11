@@ -34,10 +34,9 @@ var Global = GlobalInfo{
 func CostEstimator(newOrderLocal chan<- int) {
 	for {
 		time.Sleep(config.CostEstimator_UpdateRate)
-		// beginTotal := time.Now()
-		// beginPre := time.Now()
+		beginTotal := time.Now()
+		//beginPre := time.Now()
 		/* Pre-check for cab orders */
-		fmt.Println("I'm in the Cost Estimator")
 		for floor, floorStates := range Global.Orders {
 			if floorStates[Global.ID].Cab && !floorStates[Global.ID].Clear {
 				Node.Queue[floor].Cab = true
@@ -47,7 +46,7 @@ func CostEstimator(newOrderLocal chan<- int) {
 		// endPre := time.Since(beginPre)
 		// fmt.Println("||Pre-check:\t\t", endPre)
 		// fmt.Println("|")
-		// beginCC1 := time.Now()
+		beginCC1 := time.Now()
 		/* Cost calculation for non-cab orders */
 		for floor, floorStates := range Global.Orders {
 			// beginCC2 := time.Now()
@@ -120,11 +119,11 @@ func CostEstimator(newOrderLocal chan<- int) {
 			// endCC2 := time.Since(beginCC2)
 			// fmt.Println("|||Floor loop:\t",endCC2)
 		}
-		// endCC1 := time.Since(beginCC1)
-		// endTotal := time.Since(beginTotal)
-		// fmt.Println("||Elevator loop:\t\t",endCC1)
-		// fmt.Println("|Total:\t\t\t",endTotal)
-		// fmt.Println()
+		endCC1 := time.Since(beginCC1)
+		endTotal := time.Since(beginTotal)
+		fmt.Println("||Elevator loop:\t\t",endCC1)
+		fmt.Println("|Total:\t\t\t",endTotal)
+		fmt.Println()
 	}
 }
 
@@ -144,13 +143,15 @@ func KingOfOrders(btnsPressedLocal <-chan ButtonEvent, newPackets <-chan GlobalI
 			switch btn.Button {
 			case BT_HallUp:
 				Global.Orders[btn.Floor][Global.ID].Up = true
+				fmt.Println("Buttonpress UP at floor", btn.Floor)
 			case BT_HallDown:
 				Global.Orders[btn.Floor][Global.ID].Down = true
+				fmt.Println("Buttonpress DOWN at floor", btn.Floor)
 			case BT_Cab:
 				Global.Orders[btn.Floor][Global.ID].Cab = true
+				fmt.Println("Buttonpress CAB at floor", btn.Floor)
 			}
 			refreshButtonLights <- btn.Floor
-			fmt.Println("I refreshed my lights after getting a button order")
 
 		case msg := <-newPackets:
 
@@ -167,6 +168,10 @@ func KingOfOrders(btnsPressedLocal <-chan ButtonEvent, newPackets <-chan GlobalI
 								Global.Orders[msgFloor][msgElevID].Down || msgFloorState.Down
 							Global.Orders[msgFloor][msgElevID].Cab =
 								Global.Orders[msgFloor][msgElevID].Cab || msgFloorState.Cab
+
+							fmt.Println("Up order in floor: ", msgFloor, " from network: " , Global.Orders[msgFloor][msgElevID].Up)
+							fmt.Println("Down order in floor: ", msgFloor, " from network: " , Global.Orders[msgFloor][msgElevID].Down)
+							fmt.Println("Cab order in floor: ", msgFloor, " from network: " , Global.Orders[msgFloor][msgElevID].Cab)
 						} else {
 							/* Remove all up/down orders if there is a clear present */
 							for elevID := 0; elevID < config.NElevs; elevID++ {
@@ -179,7 +184,6 @@ func KingOfOrders(btnsPressedLocal <-chan ButtonEvent, newPackets <-chan GlobalI
 					}
 				}
 				refreshButtonLights <- -1
-				fmt.Println("I refreshed my lights after getting a network order")
 			}
 		case floor := <-clearOrderLocal:
 			go clearTimeout(floor)
@@ -201,7 +205,6 @@ func KingOfOrders(btnsPressedLocal <-chan ButtonEvent, newPackets <-chan GlobalI
 			/*********************************************/
 
 			refreshButtonLights <- floor
-			fmt.Println("I refreshed my lights after clearing orders")
 		}
 	}
 }

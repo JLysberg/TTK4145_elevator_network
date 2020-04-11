@@ -107,15 +107,15 @@ func stopCriteria(floor int) bool {
 
 func Printer() {
 	for {
-		time.Sleep(1 * time.Millisecond)
+		time.Sleep(1 * time.Second)
 
-		// for _, floorStates := range monitor.Global.Orders {
-		// 	for _, floorState := range floorStates {
-		// 		fmt.Println("*", floorState)
-		// 	}
-		// }
-		// fmt.Println("#", monitor.Node.Queue)
-		// fmt.Println()
+		for _, floorStates := range monitor.Global.Orders {
+			for _, floorState := range floorStates {
+		 		fmt.Println("*", floorState)
+		 	}
+		}
+		fmt.Println("#", monitor.Node.Queue)
+		fmt.Println()
 
 		fmt.Println("State:", monitor.Node.State)
 	}

@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 	"strconv"
-	"time"
+	//"time"
 	"fmt"
 	"os"
 
@@ -71,11 +71,11 @@ func main() {
 		GlobalInfoTx = make(chan GlobalInfo)
 		GlobalInfoRx = make(chan GlobalInfo)
 	)
-	//go fsm.Printer()
+	go fsm.Printer()
 
 	go monitor.CostEstimator(ch.NewOrder)
 	go monitor.KingOfOrders(ch.ButtonPress, GlobalInfoRx,
-		ch.ButtonLights_Refresh, ch.ClearOrder)
+		ch.ButtonLights_Refresh, ch.ClearOrder, GlobalInfoTx)
 	go monitor.LightSetter(ch.ButtonLights_Refresh)
 
 	go elevio.PollButtons(ch.ButtonPress)
@@ -85,28 +85,6 @@ func main() {
 	go fsm.Run(ch)
 	
 	
-   
-	// We define some custom struct to send over the network.
-	// Note that all members we want to transmit must be public. Any private members
-	//  will be received as zero-values.
-	/*
-	type HelloMsg struct {
-		Message string
-		Iter    int
-	}
-	*/
-
-	// Our id can be anything. Here we pass it on the command line, using
-	//  `go run main.go -id=our_id`
-	
-	//var id string
-	//flag.StringVar(&id, "id", "", "id of this peer")
-	//flag.Parse()
-	
-
-	// ... or alternatively, we can use the local IP address.
-	// (But since we can run multiple programs on the same PC, we also append the
-	//  process ID)
 	if id == "" {
 		localIP, err := localip.LocalIP()
 		if err != nil {
@@ -141,16 +119,15 @@ func main() {
 	go bcast.Receiver(30025, GlobalInfoRx)
 	//16569
 
-	//go func() {
-		for {
-			
-			GlobalInfoTx <- monitor.Global			
-			time.Sleep(500 * time.Millisecond)	
-		}
-	//}()
+//	go func() {
+//		for {			
+//			time.Sleep(500 * time.Millisecond)	
+//		}
+//	}()
 
-
-	fmt.Println("Started")
+	select {}
+}
+	//fmt.Println("Started")
 /*	go func() {
 		for {
 			select {
@@ -170,8 +147,7 @@ func main() {
 		}
 	}()
 */
-	select {}
-}
+
 
 
 /*

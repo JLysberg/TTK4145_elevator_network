@@ -37,6 +37,7 @@ func CostEstimator(newOrderLocal chan<- int) {
 		// beginTotal := time.Now()
 		// beginPre := time.Now()
 		/* Pre-check for cab orders */
+		fmt.Println("I'm in the Cost Estimator")
 		for floor, floorStates := range Global.Orders {
 			if floorStates[Global.ID].Cab && !floorStates[Global.ID].Clear {
 				Node.Queue[floor].Cab = true
@@ -135,12 +136,11 @@ func clearTimeout(floor int) {
 }
 
 func KingOfOrders(btnsPressedLocal <-chan ButtonEvent, newPackets <-chan GlobalInfo,
-	refreshButtonLights chan<- int, clearOrderLocal chan int) {
+	refreshButtonLights chan<- int, clearOrderLocal chan int, sendPackets chan<- GlobalInfo) {
 	refreshButtonLights <- -1
 	for {
 		select {
 		case btn := <-btnsPressedLocal:
-			fmt.Printf("Got a new buttonpress order")
 			switch btn.Button {
 			case BT_HallUp:
 				Global.Orders[btn.Floor][Global.ID].Up = true
@@ -150,11 +150,13 @@ func KingOfOrders(btnsPressedLocal <-chan ButtonEvent, newPackets <-chan GlobalI
 				Global.Orders[btn.Floor][Global.ID].Cab = true
 			}
 			refreshButtonLights <- btn.Floor
+			fmt.Println("I refreshed my lights after getting a button order")
+			sendPackets <- Global
+
 		case msg := <-newPackets:
 
 			/* Only update local Global.Orders if it differs from msg.Orders */
 			if msg.Orders != Global.Orders && msg.ID != Global.ID{
-				fmt.Printf("Got a new order from the network")
 			
 				for msgFloor, msgFloorStates := range msg.Orders {
 					for msgElevID, msgFloorState := range msgFloorStates {
@@ -178,6 +180,8 @@ func KingOfOrders(btnsPressedLocal <-chan ButtonEvent, newPackets <-chan GlobalI
 					}
 				}
 				refreshButtonLights <- -1
+				fmt.Println("I refreshed my lights after getting a network order")
+				sendPackets <- Global
 			}
 		case floor := <-clearOrderLocal:
 			go clearTimeout(floor)
@@ -199,6 +203,8 @@ func KingOfOrders(btnsPressedLocal <-chan ButtonEvent, newPackets <-chan GlobalI
 			/*********************************************/
 
 			refreshButtonLights <- floor
+			fmt.Println("I refreshed my lights after clearing orders")
+			sendPackets <- Global
 		}
 	}
 }

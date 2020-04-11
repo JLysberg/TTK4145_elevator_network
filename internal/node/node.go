@@ -18,20 +18,34 @@ import (
 // 	}
 // }
 
+func Initialize(floorSensor <-chan int, lightRefresh chan<- int) {
+	/*	Enter defined state */
+	elevio.SetMotorDirection(MD_Down)
+	floor := <-floorSensor
+	elevio.SetMotorDirection(MD_Stop)
+	/*	Initialize local memory */
+	monitor.Local.Dir = MD_Stop
+	monitor.Local.LastDir = MD_Down
+	monitor.Local.State = ES_Idle
+	monitor.Local.Floor = floor
+	/*	Refresh all button lights */
+	lightRefresh <- -1
+
+	elevio.SetFloorIndicator(floor)
+}
+
 var doorTimeout = time.NewTimer(1 * time.Hour)
 
-/*	NodeServer handles all logic and communications between local
-	routines. */
-func NodeServer(ch NodeChannels) {
-	initialize(ch.FloorSensor)
-
+/*	ElevatorServer handles all elevator logic and communications between local
+	routines in current node. */
+func ElevatorServer(ch NodeChannels) {
 	for {
 		select {
-		case floor := <-ch.NewOrder:
+		case orderFloor := <-ch.UpdateQueue:
 			switch monitor.Local.State {
 			case ES_Stop, ES_Idle:
-				if floor == monitor.Local.Floor {
-					floorStop(floor, ch.ClearOrder)
+				if orderFloor == monitor.Local.Floor {
+					floorStop(orderFloor, ch.ClearOrder)
 				} else {
 					go setDirection(ch.DoorTimeout)
 				}
@@ -39,11 +53,11 @@ func NodeServer(ch NodeChannels) {
 				go setDirection(ch.DoorTimeout)
 			}
 
-		case floor := <-ch.FloorSensor:
-			go elevio.SetFloorIndicator(floor)
-			monitor.Local.Floor = floor
-			if stopCriteria(floor) {
-				floorStop(floor, ch.ClearOrder)
+		case arrivedFloor := <-ch.FloorSensor:
+			go elevio.SetFloorIndicator(arrivedFloor)
+			monitor.Local.Floor = arrivedFloor
+			if stopCriteria(arrivedFloor) {
+				floorStop(arrivedFloor, ch.ClearOrder)
 				go setDirection(ch.DoorTimeout)
 			}
 
@@ -56,9 +70,9 @@ func NodeServer(ch NodeChannels) {
 				monitor.Local.State = ES_Run
 			}
 
-		case enabled := <-ch.ObstructionSwitch:
+		case switchEnabled := <-ch.ObstructionSwitch:
 			if monitor.Local.State == ES_Stop {
-				if enabled {
+				if switchEnabled {
 					doorTimeout.Reset(1 * time.Hour)
 				} else {
 					doorTimeout.Reset(config.DoorTimeout)

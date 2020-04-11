@@ -24,7 +24,8 @@ var Global GlobalInfo
 /*	CostEstimator is a goroutine which continuously assigns orders from 
 	the global order matrix to any node, taking multiple factors into account.
 	All active orders are always assigned to the elevator with the least cost.
-	Consequently ensures the queue in local node memory is always up to date.
+	The responsibility of CostEstimator is to guarantee that Local.Queue 
+	is always up to date.
 	
 	Cost = distance cost + state cost:
 		Distance		Cost
@@ -39,14 +40,14 @@ var Global GlobalInfo
 		Stopped			+1
 		Has passed		+5
 		NOTE: (Has passed includes case of passing order in opposite direction) */
-func CostEstimator(newOrderLocal chan<- int) {
+func CostEstimator(updateQueue chan<- int) {
 	for {
-		time.Sleep(config.UpdateRate)
+		estBegin := time.Now()
 		/*	Always assign cab orders to local node */
 		for floor, floorStates := range Global.Orders {
 			if floorStates[Global.ID].Cab && !floorStates[Global.ID].Clear{
 				Local.Queue[floor].Cab = true
-				newOrderLocal <- floor
+				updateQueue <- floor
 			}
 		}
 		/*	Cost calculation for non-cab orders */
@@ -59,6 +60,7 @@ func CostEstimator(newOrderLocal chan<- int) {
 						Local.Queue[floor].Cab = false
 					}
 				} else if floorState.Up || floorState.Down {
+					// fmt.Println("calculating")
 					bestCost := int(math.Inf(1))
 					bestID := 0
 					cost := 0
@@ -96,32 +98,41 @@ func CostEstimator(newOrderLocal chan<- int) {
 					/*	Assign order to local node if optimal */
 					if bestID == Global.ID && Local.Queue[floor] != floorState {
 						Local.Queue[floor] = floorState
-						newOrderLocal <- floor
+						updateQueue <- floor
 					}
 				}
 			}
 		}
+		/*	Calculate runtime and sleep if runtime is less than updaterate */
+		estRuntime := time.Since(estBegin)
+		if estRuntime < config.UpdateRate {
+			time.Sleep(config.UpdateRate - estRuntime)
+		}
+
+		fmt.Println("estRuntime:", estRuntime)
 	}
 }
 
-func KingOfOrders(btnsPressedLocal <-chan ButtonEvent, newPackets <-chan []byte,
-				  refreshButtonLights chan<- int, clearOrderLocal chan int) {
-	refreshButtonLights <- -1
+/*	OrderServer handles all incoming orders. This includes all new local orders 
+	as well as incoming network packets. The responsibility ofOrderServerr is 
+	to guarantee that Global.Orders is always up to date with the rest of the network */
+func OrderServer(buttonPress <-chan ButtonEvent, newPackets <-chan []byte,
+				  lightRefresh chan<- int, clearOrder <-chan int) {
 	for {
 		select {
-		case btn := <-btnsPressedLocal:
-			switch btn.Button {
+		case pressedButton := <-buttonPress:
+			switch pressedButton.Button {
 			case BT_HallUp:
-				Global.Orders[btn.Floor][Global.ID].Up = true
+				Global.Orders[pressedButton.Floor][Global.ID].Up = true
 			case BT_HallDown:
-				Global.Orders[btn.Floor][Global.ID].Down = true
+				Global.Orders[pressedButton.Floor][Global.ID].Down = true
 			case BT_Cab:
-				Global.Orders[btn.Floor][Global.ID].Cab = true
+				Global.Orders[pressedButton.Floor][Global.ID].Cab = true
 			}
-			refreshButtonLights <- btn.Floor
-		case packet := <-newPackets:
+			lightRefresh <- pressedButton.Floor
+		case receivedPackage := <-newPackets:
 			var msg GlobalInfo
-			err := json.Unmarshal(packet, &msg)
+			err := json.Unmarshal(receivedPackage, &msg)
 			if err != nil {
 				fmt.Println("Error with unmarshaling message in Monitor:", err)
 			}
@@ -148,66 +159,47 @@ func KingOfOrders(btnsPressedLocal <-chan ButtonEvent, newPackets <-chan []byte,
 						}
 					}
 				}
-				refreshButtonLights <- -1
+				lightRefresh <- -1
 			}
-		case floor := <-clearOrderLocal:
-			go clearTimeout(floor)
-
-			/*	Hack to ensure each elevator is not dependent on a full
-				cost estimator run to clear order from queue */
-			Local.Queue[floor].Up = false
-			Local.Queue[floor].Down = false
-			Local.Queue[floor].Cab = false
+		case clearFloor := <-clearOrder:
+			go clearTimeout(clearFloor)
+			lightRefresh <- clearFloor
 			/*	The following block might be superfluous when networks are introduced*/
 			/********************************************/
 			/*	Remove all up/down orders if there is a clear present */
 			for elevID := 0; elevID < config.NElevs; elevID++ {
-				Global.Orders[floor][elevID].Up = false
-				Global.Orders[floor][elevID].Down = false
+				Global.Orders[clearFloor][elevID].Up = false
+				Global.Orders[clearFloor][elevID].Down = false
 			}
 			/*	Also remove cab order if present */
-			Global.Orders[floor][Global.ID].Cab = false
+			Global.Orders[clearFloor][Global.ID].Cab = false
 			/*********************************************/
-
-			refreshButtonLights <- floor
 		}
 	}
 }
 
-/*	Lightsetter updates every button light in accordance with the global order 
-	matrix on refresh call */
-func LightSetter(refresh <-chan int) {
+/*	LightServer updates every button light in accordance with the global order 
+	matrix on refresh call. A refresh call of -1 updates all buttons, and 
+	any specific floor call restricts the iteration to said floor. */
+func LightServer(lightRefresh <-chan int) {
 	for {
-		floor := <-refresh
-		// Really bad code quality, but this works for now :)
-		if floor != -1 {
-			for elevID := 0; elevID < config.NElevs; elevID++ {
-				for button := BT_HallUp; button <= BT_Cab; button++ {
-					lightValue := false
-					switch button {
-					case BT_HallUp:
-						lightValue = Global.Orders[floor][elevID].Up
-					case BT_HallDown:
-						lightValue = Global.Orders[floor][elevID].Down
-					case BT_Cab:
-						lightValue = Global.Orders[floor][elevID].Cab &&
-							elevID == Global.ID
-					}
-					elevio.SetButtonLamp(button, floor, lightValue)
+		select {
+		case callingFloor := <-lightRefresh:
+			for floor, floorStates := range Global.Orders {
+				/*	Skip most of the iteration if callingFloor is specified */
+				if (callingFloor != -1) && (floor != callingFloor) {
+					continue
 				}
-			}
-		} else {
-			for floor := 0; floor < config.MFloors; floor++ {
-				for elevID := 0; elevID < config.NElevs; elevID++ {
+				for elevID, floorState := range floorStates {
 					for button := BT_HallUp; button <= BT_Cab; button++ {
 						lightValue := false
 						switch button {
 						case BT_HallUp:
-							lightValue = Global.Orders[floor][elevID].Up
+							lightValue = floorState.Up
 						case BT_HallDown:
-							lightValue = Global.Orders[floor][elevID].Down
+							lightValue = floorState.Down
 						case BT_Cab:
-							lightValue = Global.Orders[floor][elevID].Cab &&
+							lightValue = floorState.Cab &&
 								elevID == Global.ID
 						}
 						elevio.SetButtonLamp(button, floor, lightValue)

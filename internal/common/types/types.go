@@ -48,7 +48,7 @@ type NodeChannels struct {
 	ButtonPress       chan ButtonEvent
 	FloorSensor       chan int
 	ObstructionSwitch chan bool
-	NewOrder          chan int
+	UpdateQueue          chan int
 	PacketReceiver    chan []byte
 	LightRefresh      chan int
 	ClearOrder        chan int

@@ -12,8 +12,8 @@ import (
 	*/
 	"github.com/JLysberg/TTK4145_elevator_network/internal/common/config"
 	. "github.com/JLysberg/TTK4145_elevator_network/internal/common/types"
-	"github.com/JLysberg/TTK4145_elevator_network/internal/node"
 	"github.com/JLysberg/TTK4145_elevator_network/internal/monitor"
+	"github.com/JLysberg/TTK4145_elevator_network/internal/node"
 	"github.com/JLysberg/TTK4145_elevator_network/pkg/elevio"
 )
 
@@ -31,33 +31,32 @@ func main() {
 	monitor.Global.ID = ID
 
 	ch := NodeChannels{
-		ButtonPress:          make(chan ButtonEvent),
-		NewOrder:             make(chan int),
-		FloorSensor:          make(chan int),
-		ObstructionSwitch:    make(chan bool),
-		PacketReceiver:       make(chan []byte),
-		LightRefresh: make(chan int),
-		ClearOrder:           make(chan int),
-		DoorTimeout: 		  make(chan bool),
+		ButtonPress:       make(chan ButtonEvent),
+		UpdateQueue:          make(chan int),
+		FloorSensor:       make(chan int),
+		ObstructionSwitch: make(chan bool),
+		PacketReceiver:    make(chan []byte),
+		LightRefresh:      make(chan int),
+		ClearOrder:        make(chan int),
+		DoorTimeout:       make(chan bool),
 	}
 
-	// go fsm.Printer()
+	go node.Initialize(ch.FloorSensor, ch.LightRefresh)
+	// go node.Printer()
 
-	go monitor.CostEstimator(ch.NewOrder)
-	go monitor.KingOfOrders(ch.ButtonPress, ch.PacketReceiver,
+	go monitor.CostEstimator(ch.UpdateQueue)
+	go monitor.OrderServer(ch.ButtonPress, ch.PacketReceiver,
 		ch.LightRefresh, ch.ClearOrder)
-	go monitor.LightSetter(ch.LightRefresh)
+	go monitor.LightServer(ch.LightRefresh)
 
 	go elevio.PollButtons(ch.ButtonPress)
 	go elevio.PollFloorSensor(ch.FloorSensor)
 	go elevio.PollObstructionSwitch(ch.ObstructionSwitch)
 
-	node.NodeServer(ch)
+	node.ElevatorServer(ch)
 }
 
 /*
-KNOWN BUGS:
-
 TODO:
 Jostein:
 	- monitor: Split cost estimator into sereral threads to improve performance.

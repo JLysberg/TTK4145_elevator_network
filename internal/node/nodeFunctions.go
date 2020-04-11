@@ -56,11 +56,9 @@ func setDirection(doorOpen <-chan bool) {
 		return
 	}
 	setDirectionInstance = true
-
 	/*	Minor delay to allow cost estimator to evaluate orders
 		CONSIDER USING SEMAPHORES */
 	time.Sleep(1 * time.Nanosecond)
-
 	/*	Safety loop to ensure direction is never changed while door is open */
 	if monitor.Local.State == ES_Stop {
 	safety:
@@ -71,7 +69,6 @@ func setDirection(doorOpen <-chan bool) {
 			}
 		}
 	}
-
 	/*	Calculate, set and save direction to local memory */
 	dir := calculateDirection()
 	elevio.SetMotorDirection(dir)
@@ -100,18 +97,4 @@ func floorStop(floor int, clearOrder chan<- int) {
 	/* Open door */
 	doorTimeout.Reset(config.DoorTimeout)
 	elevio.SetDoorOpenLamp(true)
-}
-
-func initialize(floorSensor <-chan int) {
-	/* Enter defined state */
-	elevio.SetMotorDirection(MD_Down)
-	floor := <-floorSensor
-	elevio.SetMotorDirection(MD_Stop)
-	/* Initialize local memory */
-	monitor.Local.Dir = MD_Stop
-	monitor.Local.LastDir = MD_Down
-	monitor.Local.State = ES_Idle
-	monitor.Local.Floor = floor
-
-	elevio.SetFloorIndicator(floor)
 }

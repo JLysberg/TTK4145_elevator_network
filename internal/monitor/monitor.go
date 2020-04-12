@@ -139,6 +139,19 @@
 				lightRefresh <- pressedButton.Floor
 			case msg := <-newPackets:
 				/*	Only update local Global.Orders if it differs from msg.Orders */
+
+				//print both registered local and global orders
+				fmt.Println("Got a network order")
+                for i, _ := range Global.Orders {
+                    fmt.Println("Elev 0, Local:", Global.Orders[i][0],
+                                "Network:", msg.Orders[i][0])
+                }
+                for i, _ := range Global.Orders {
+                    fmt.Println("Elev 1, Local:", Global.Orders[i][1],
+                                "Network:", msg.Orders[i][1])
+                }
+                fmt.Println()
+				//
 				if msg.Orders != Global.Orders {
 					fmt.Println("Got a network order")
 					for msgFloor, msgFloorStates := range msg.Orders {

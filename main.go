@@ -73,9 +73,8 @@ func main() {
 		DoorTimeout:       make(chan bool),
 	}
 
+	//go node.Printer()
 	go node.Initialize(ch.FloorSensor, ch.LightRefresh)
-	// go node.Printer()
-
 	go monitor.CostEstimator(ch.UpdateQueue)
 	go monitor.OrderServer(ch.ButtonPress, GlobalInfoRx,
 		ch.LightRefresh, ch.ClearOrder)
@@ -85,7 +84,7 @@ func main() {
 	go elevio.PollFloorSensor(ch.FloorSensor)
 	go elevio.PollObstructionSwitch(ch.ObstructionSwitch)
 
-	node.ElevatorServer(ch)
+//	go node.ElevatorServer(ch)
 	
 	
 	if id == "" {
@@ -128,9 +127,8 @@ func main() {
 			time.Sleep(1 * time.Second)	
 		}
 	}()
-
-	select {}
-	node.ElevatorServer(ch)
+	go node.ElevatorServer(ch)
+	select{}
 }
 	//fmt.Println("Started")
 /*	go func() {

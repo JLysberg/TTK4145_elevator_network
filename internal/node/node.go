@@ -2,6 +2,7 @@ package node
 
 import (
 	"time"
+	"fmt"
 	/* Setup desc. in main*/
 	//"github.com/JLysberg/TTK4145_elevator_network/internal/common/config"
 	//. "github.com/JLysberg/TTK4145_elevator_network/internal/common/types"
@@ -14,13 +15,19 @@ import (
 	"../../pkg/elevio"
 )
 
-// func Printer() {
-// 	for {
-// 		time.Sleep(1 * time.Millisecond)
+func Printer() {
+	for {
+		time.Sleep(1 * time.Second)
 
-// 		fmt.Println("State:", monitor.Local.State)
-// 	}
-// }
+		for _, floorStates := range monitor.Global.Orders {
+			for _, floorState := range floorStates {
+				fmt.Println("*", floorState)
+			}
+		}
+		fmt.Println("#", monitor.Local.Queue)
+		fmt.Println()
+	}
+}
 
 func Initialize(floorSensor <-chan int, lightRefresh chan<- int) {
 	/*	Enter defined state */

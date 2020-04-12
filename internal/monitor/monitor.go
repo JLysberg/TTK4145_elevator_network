@@ -3,7 +3,7 @@
 	package monitor
 
 	import (
-	//	"fmt"
+		"fmt"
 		"math"
 		"time"
 	
@@ -140,6 +140,7 @@
 			case msg := <-newPackets:
 				/*	Only update local Global.Orders if it differs from msg.Orders */
 				if msg.Orders != Global.Orders {
+					fmt.Println("Got a network order")
 					for msgFloor, msgFloorStates := range msg.Orders {
 						for msgElevID, msgFloorState := range msgFloorStates {
 							if !msgFloorState.Clear {
@@ -204,6 +205,8 @@
 								lightValue = floorState.Cab &&
 									elevID == Global.ID
 							}
+							fmt.Println("Set the lights for " , button, " in floor ", floor , " to ", lightValue)
+
 							elevio.SetButtonLamp(button, floor, lightValue)
 						}
 					}

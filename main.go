@@ -24,7 +24,8 @@ import (
 
 	"./internal/common/config"
 	. "./internal/common/types"
-	"./internal/fsm"
+	"./internal/node"
+	
 
 	"./internal/monitor"
 	"./pkg/elevio"
@@ -56,41 +57,27 @@ func main() {
 
 	//go run main.go -id=1 -port=15658
 
-	ch := fsm.StateMachineChannels{
-		ButtonPress:          make(chan ButtonEvent),
-		NewOrder:             make(chan int),
-		FloorSensor:          make(chan int),
-		ObstructionSwitch:    make(chan bool),
-		//PacketReceiver:   	  make(chan GlobalInfo),
-		//PacketSender:     	  make(chan GlobalInfo),
-		ButtonLights_Refresh: make(chan int),
-		ClearOrder:           make(chan int),
-		DoorTimeout: 		  make(chan bool),
+	var(
+		GlobalInfoTx = make(chan GlobalInfo)
+		GlobalInfoRx = make(chan GlobalInfo)
+	)	
+	
 	ch := NodeChannels{
 		ButtonPress:       make(chan ButtonEvent),
 		UpdateQueue:          make(chan int),
 		FloorSensor:       make(chan int),
 		ObstructionSwitch: make(chan bool),
-		PacketReceiver:    make(chan []byte),
+		//PacketReceiver:    make(chan []byte),
 		LightRefresh:      make(chan int),
 		ClearOrder:        make(chan int),
 		DoorTimeout:       make(chan bool),
 	}
 
-	var(
-		GlobalInfoTx = make(chan GlobalInfo)
-		GlobalInfoRx = make(chan GlobalInfo)
-	)
-//	go fsm.Printer()
 	go node.Initialize(ch.FloorSensor, ch.LightRefresh)
 	// go node.Printer()
 
-	go monitor.CostEstimator(ch.NewOrder)
-	go monitor.KingOfOrders(ch.ButtonPress, GlobalInfoRx,
-		ch.ButtonLights_Refresh, ch.ClearOrder)
-	go monitor.LightSetter(ch.ButtonLights_Refresh)
 	go monitor.CostEstimator(ch.UpdateQueue)
-	go monitor.OrderServer(ch.ButtonPress, ch.PacketReceiver,
+	go monitor.OrderServer(ch.ButtonPress, GlobalInfoRx,
 		ch.LightRefresh, ch.ClearOrder)
 	go monitor.LightServer(ch.LightRefresh)
 
@@ -98,7 +85,7 @@ func main() {
 	go elevio.PollFloorSensor(ch.FloorSensor)
 	go elevio.PollObstructionSwitch(ch.ObstructionSwitch)
 
-	go fsm.Run(ch)
+	node.ElevatorServer(ch)
 	
 	
 	if id == "" {
@@ -178,72 +165,3 @@ Jostein:
 	- watchdog: lookup table integration with network
 */
 
-
-
-/*
-
-	// We make a channel for receiving updates on the id's of the peers that are
-	//  alive on the network
-	peerUpdateCh := make(chan peers.PeerUpdate)
-	
-	// We can disable/enable the transmitter after it has been started.
-	// This could be used to signal that we are somehow "unavailable".
-	
-	peerTxEnable := make(chan bool)
-	go peers.Transmitter(15647, id, peerTxEnable)
-	go peers.Receiver(15647, peerUpdateCh)
-
-	// We make channels for sending and receiving our custom data types
-	globalInfoTx := make(chan GlobalInfo)
-	globalInfoRx := make(chan GlobalInfo)
-	// ... and start the transmitter/receiver pair on some port
-	// These functions can take any number of channels! It is also possible to
-	//  start multiple transmitters/receivers on the same port.
-	go bcast.Transmitter(16569, globalInfoTx)
-	go bcast.Receiver(16569, globalInfoRx)
-
-	// The example message. We just send one of these every second.
-	go func() {
-		for {
-			globalInfoTx <- GlobalInfo
-			time.Sleep(1 * time.Second)
-		}
-	}()
-
-	fmt.Println("Started")
-	for {
-		select {
-		case p := <-peerUpdateCh:
-			fmt.Printf("Peer update:\n")
-			fmt.Printf("  Peers:    %q\n", p.Peers)
-			fmt.Printf("  New:      %q\n", p.New)
-			fmt.Printf("  Lost:     %q\n", p.Lost)
-
-		case a := <-globalInfoRx:
-			ch.PacketReceiver <- a
-			fmt.Printf("Received: %#v\n", a)
-		}
-	}
-
-*/
-
-
-
-/*
-
-    // We make a channel for receiving updates on the id's of the peers that are
-    //  alive on the network
-    peerUpdateCh := make(chan peers.PeerUpdate)
-    
-    // We can disable/enable the transmitter after it has been started.
-    // This could be used to signal that we are somehow "unavailable".
-    peerTxEnable := make(chan bool)
-    go peers.Transmitter(15648, id, peerTxEnable)
-    go peers.Receiver(15648, peerUpdateCh)
-    go network_handler.SendMsg(ch.PacketSender)
-	go network_handler.ReceiveMsg(ch.PacketReceiver)
-	
-
-
-	
-*/

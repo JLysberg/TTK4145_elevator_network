@@ -9,6 +9,7 @@ import (
 /*	. "github.com/JLysberg/TTK4145_elevator_network/internal/common/types"
 	"github.com/JLysberg/TTK4145_elevator_network/internal/common/config"
 */
+	"../monitor"
 	. "../common/types"
 	"../common/config"
 )
@@ -18,12 +19,6 @@ import (
 func UpdateElevLastSent(newPackets chan packetReceiver){
 	select{
 		case packet := <- newPackets
-				var msg types.GlobalInfo
-				err := json.Unmarshal(packet, &msg)
-				if err != nil {
-					fmt.Println("Error with unmarshaling message in Watchdog:", err)
-				}
-
 				types.NodeInfo.ElevLastSent[msg.LocalID] = time.Now()
 			}
 		}
@@ -35,6 +30,11 @@ func UpdateOnlineList(newPackets chan packetReceiver){
 		for i := 0; i < config.NElevs; i++{
 			if (time.Now() - types.NodeInfo.ElevLastSent[i]) < 3 * time.Second(){
 				types.NodeInfo.OnlineList[i] = 1
+				if(types.NodeInfo.State - )
+					types.NodeInfo,OnlineList[i] = 
+
+					monitor.Node.State
+				}
 			}
 			else{
 				types.NodeInfo.OnlineList[i] = 0

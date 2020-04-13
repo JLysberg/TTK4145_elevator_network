@@ -1,12 +1,13 @@
 package bcast
 
 import (
-	"../conn"
 	"encoding/json"
 	"fmt"
 	"net"
 	"reflect"
 	"strings"
+
+	"github.com/JLysberg/TTK4145_elevator_network/pkg/network/conn"
 )
 
 // Encodes received values from `chans` into type-tagged JSON, then broadcasts

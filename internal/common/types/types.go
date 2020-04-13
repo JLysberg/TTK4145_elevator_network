@@ -5,9 +5,8 @@ import (
 	// "../config"
 
 	/* Setup desc. in main */
-	//"github.com/JLysberg/TTK4145_elevator_network/internal/common/config"
-	
-	"../config"
+	"github.com/JLysberg/TTK4145_elevator_network/internal/common/config"
+	//"../config"
 )
 
 type MotorDirection int
@@ -50,11 +49,11 @@ type NodeChannels struct {
 	ButtonPress       chan ButtonEvent
 	FloorSensor       chan int
 	ObstructionSwitch chan bool
-	UpdateQueue          chan int
+	UpdateQueue       chan int
 	PacketReceiver    chan []byte
 	LightRefresh      chan int
 	ClearOrder        chan int
-	DoorTimeout		  chan bool
+	DoorTimeout       chan bool
 }
 
 type LocalInfo struct {
@@ -72,4 +71,3 @@ type GlobalInfo struct {
 	Nodes  [config.NElevs]LocalInfo
 	Orders [config.MFloors][config.NElevs]FloorState
 }
-

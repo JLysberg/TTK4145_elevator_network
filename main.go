@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"strconv"
+
 	//"time"
 	//"fmt"
 	//"os"
@@ -12,34 +13,37 @@ import (
 		   equal to %GOROOT%.
 		2. Pull repository with "go get github.com/JLysberg/TTK4145_elevator_network"
 		3. The following import paths should be compatible
-	
 
+	*/
 	"github.com/JLysberg/TTK4145_elevator_network/internal/common/config"
 	. "github.com/JLysberg/TTK4145_elevator_network/internal/common/types"
 	"github.com/JLysberg/TTK4145_elevator_network/internal/monitor"
 	"github.com/JLysberg/TTK4145_elevator_network/internal/node"
+	"github.com/JLysberg/TTK4145_elevator_network/internal/sync"
 	"github.com/JLysberg/TTK4145_elevator_network/pkg/elevio"
-	*/
+	"github.com/JLysberg/TTK4145_elevator_network/pkg/network/peers"
+
+	//"github.com/JLysberg/TTK4145_elevator_network/pkg/network/localip"
+	"github.com/JLysberg/TTK4145_elevator_network/pkg/network/bcast"
 	//"./internal/network_handler"
+	/*
+		"./internal/common/config"
+		. "./internal/common/types"
+		"./internal/node"
 
-	"./internal/common/config"
-	. "./internal/common/types"
-	"./internal/node"
-	
 
-	"./internal/monitor"
-	"./internal/sync"
-	"./pkg/elevio"
-	"./pkg/network/peers"
-	"./pkg/network/bcast"
-	//"./pkg/network/localip"
-
+		"./internal/monitor"
+		"./internal/sync"
+		"./pkg/elevio"
+		"./pkg/network/peers"
+		"./pkg/network/bcast"
+	*///"./pkg/network/localip"
 )
 
-func main() {	
-	
+func main() {
+
 	var (
-		id string
+		id   string
 		port string
 	)
 
@@ -59,13 +63,13 @@ func main() {
 	//go run main.go -id=1 -port=15658
 
 	sch := sync.NetworkChannels{
-		MsgTransmitter: 	make(chan GlobalInfo),
-		MsgReceiver: 		make(chan GlobalInfo),
-		PeerUpdate: 		make(chan peers.PeerUpdate),
-		PeerTxEnable:		make(chan bool),
+		MsgTransmitter: make(chan GlobalInfo),
+		MsgReceiver:    make(chan GlobalInfo),
+		PeerUpdate:     make(chan peers.PeerUpdate),
+		PeerTxEnable:   make(chan bool),
 	}
-	OutgoingMsg := make(chan<-GlobalInfo) 
-	
+	//OutgoingMsg := make(chan<- GlobalInfo)
+
 	ch := NodeChannels{
 		ButtonPress:       make(chan ButtonEvent),
 		UpdateQueue:       make(chan int),
@@ -83,7 +87,7 @@ func main() {
 		ch.LightRefresh, ch.ClearOrder)
 	//go sync.SyncMessages(sch.MsgTransmitter, sch.MsgReceiver, sch.PeerUpdate, id)
 	go sync.SyncMessages(sch, id)
-	go sync.SendMessage(OutgoingMsg)
+	//go sync.SendMessage(OutgoingMsg)
 	go monitor.LightServer(ch.LightRefresh)
 
 	go elevio.PollButtons(ch.ButtonPress)
@@ -96,9 +100,8 @@ func main() {
 	go peers.Receiver(30125, sch.PeerUpdate)
 
 	go node.ElevatorServer(ch)
-	select{}
+	select {}
 }
-
 
 /*
 TODO:
@@ -109,4 +112,3 @@ Jostein:
 	- network
 	- watchdog: lookup table integration with network
 */
-

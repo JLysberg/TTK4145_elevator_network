@@ -44,18 +44,12 @@ func main() {
 	)
 
 	flag.StringVar(&id, "id", "0", "id of this elevator")
-	// flag.IntVar(&ID, "id", 0, "id of this elevator")
 	flag.StringVar(&port, "port", "15657", "init port")
 	flag.Parse()
 	ID, _ := strconv.Atoi(id)
 	monitor.Global.ID = ID
 
 	elevio.Init("localhost:"+port, config.MFloors)
-
-	// 10.100.23.149
-	// 10.100.23.203
-
-	//go run main.go -id=1 -port=15658
 
 	var(
 		GlobalInfoTx = make(chan GlobalInfo)
@@ -67,7 +61,6 @@ func main() {
 		UpdateQueue:          make(chan int),
 		FloorSensor:       make(chan int),
 		ObstructionSwitch: make(chan bool),
-		//PacketReceiver:    make(chan []byte),
 		LightRefresh:      make(chan int),
 		ClearOrder:        make(chan int),
 		DoorTimeout:       make(chan bool),
@@ -83,9 +76,6 @@ func main() {
 	go elevio.PollButtons(ch.ButtonPress)
 	go elevio.PollFloorSensor(ch.FloorSensor)
 	go elevio.PollObstructionSwitch(ch.ObstructionSwitch)
-
-//	go node.ElevatorServer(ch)
-	
 	
 	if id == "" {
 		localIP, err := localip.LocalIP()

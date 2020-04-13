@@ -154,6 +154,10 @@
 									Global.Orders[msgFloor][msgElevID].Down || msgFloorState.Down
 								Global.Orders[msgFloor][msgElevID].Cab =
 									Global.Orders[msgFloor][msgElevID].Cab || msgFloorState.Cab
+
+								fmt.Println("Up order: ", Global.Orders[msgFloor][msgElevID].Up)
+								fmt.Println("Down order: ", Global.Orders[msgFloor][msgElevID].Down)
+								fmt.Println("Cab order: ", Global.Orders[msgFloor][msgElevID].Cab)
 							} else {
 								/*	Remove all up/down orders if there is a clear present */
 								for elevID := 0; elevID < config.NElevs; elevID++ {
@@ -209,8 +213,6 @@
 								lightValue = floorState.Cab &&
 									elevID == Global.ID
 							}
-							fmt.Println("Set the lights for " , button, " in floor ", floor , " to ", lightValue)
-
 							elevio.SetButtonLamp(button, floor, lightValue)
 						}
 					}

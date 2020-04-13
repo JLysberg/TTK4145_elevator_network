@@ -2,7 +2,7 @@ package node
 
 import (
 	"time"
-	"fmt"
+//	"fmt"
 	/* Setup desc. in main*/
 //	"github.com/JLysberg/TTK4145_elevator_network/internal/common/config"
 //	. "github.com/JLysberg/TTK4145_elevator_network/internal/common/types"
@@ -78,7 +78,6 @@ func setDirection(doorOpen <-chan bool) {
 	/*	Calculate, set and save direction to local memory */
 	dir := calculateDirection()
 	elevio.SetMotorDirection(dir)
-	fmt.Println("My direction: ", dir)
 	monitor.Local.Dir = dir
 	if dir != MD_Stop {
 		monitor.Local.LastDir = monitor.Local.Dir

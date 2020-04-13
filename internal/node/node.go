@@ -55,16 +55,19 @@ func ElevatorServer(ch NodeChannels) {
 		case orderFloor := <-ch.UpdateQueue:
 			switch monitor.Local.State {
 			case ES_Stop, ES_Idle:
+				ch.LightRefresh <- -1
 				if orderFloor == monitor.Local.Floor {
 					floorStop(orderFloor, ch.ClearOrder)
 				} else {
 					go setDirection(ch.DoorTimeout)
 				}
 			case ES_Run:
+				ch.LightRefresh <- -1
 				go setDirection(ch.DoorTimeout)
 			}
 
 		case arrivedFloor := <-ch.FloorSensor:
+			ch.LightRefresh <- -1
 			go elevio.SetFloorIndicator(arrivedFloor)
 			monitor.Local.Floor = arrivedFloor
 			if stopCriteria(arrivedFloor) {
@@ -73,6 +76,7 @@ func ElevatorServer(ch NodeChannels) {
 			}
 
 		case <-doorTimeout.C:
+			ch.LightRefresh <- -1
 			elevio.SetDoorOpenLamp(false)
 			ch.DoorTimeout <- true
 			if !orderAvailable() {

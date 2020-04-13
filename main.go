@@ -66,7 +66,7 @@ func main() {
 		DoorTimeout:       make(chan bool),
 	}
 
-	go node.Printer()
+	//go node.Printer()
 	go node.Initialize(ch.FloorSensor, ch.LightRefresh)
 	go monitor.CostEstimator(ch.UpdateQueue)
 	go monitor.OrderServer(ch.ButtonPress, GlobalInfoRx,
@@ -89,11 +89,11 @@ func main() {
 	
 	peerUpdateCh := make(chan peers.PeerUpdate)
 	peerTxEnable := make(chan bool)
-	go peers.Transmitter(30125, id, peerTxEnable)
-	go peers.Receiver(30125, peerUpdateCh)
+	go peers.Transmitter(21125, id, peerTxEnable)
+	go peers.Receiver(21125, peerUpdateCh)
 
-	go bcast.Transmitter(30025, GlobalInfoTx)
-	go bcast.Receiver(30025, GlobalInfoRx)
+	go bcast.Transmitter(12025, GlobalInfoTx)
+	go bcast.Receiver(12025, GlobalInfoRx)
 
 	var _mtx sync.Mutex
 	go func() {

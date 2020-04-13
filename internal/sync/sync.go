@@ -24,7 +24,7 @@
 	func SyncMessages(ch NetworkChannels, id int){
 		var(
 			sendMsg		GlobalInfo 
-			nodes		monitor.GlobalInfo.Nodes
+			nodes		monitor.GlobalInfo.Nodes  //could be directly inserted into the send case?
 			orders		monitor.GlobalInfo.Orders
 			//nodes 		[config.NEleevs]
 			//orders		[config.MFloors][config.NElevs]
@@ -33,7 +33,7 @@
 		timeout := make(chan bool)
 		go func() { time.Sleep(1 * time.Second); timeout <- true }()
 
-		bcastTicker := time.NewTicker(1*time.Second)
+		bcastTicker := time.NewTicker(500 * time.Millisecond)
 
 		select {
 		case msg := <- ch.GlobalInfoRx
@@ -51,7 +51,7 @@
 			fmt.Printf("  Peers:    %q\n", p.Peers)
 			fmt.Printf("  New:      %q\n", p.New)
 			fmt.Printf("  Lost:     %q\n", p.Lost)
-
+			/*
 			if id == "" {
 				localIP, err := localip.LocalIP()
 				if err != nil {
@@ -60,6 +60,7 @@
 				}
 				id = fmt.Sprintf("peer-%s-%d", localIP, os.Getpid())
 			}
+			*/
 		}
 
 	}

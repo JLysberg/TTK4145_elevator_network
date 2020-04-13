@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"sync"
 	"strconv"
 	"time"
 	"fmt"
@@ -47,7 +48,6 @@ func main() {
 	flag.StringVar(&port, "port", "15657", "init port")
 	flag.Parse()
 	ID, _ := strconv.Atoi(id)
-	ID = 0
 	monitor.Global.ID = ID
 
 	elevio.Init("localhost:"+port, config.MFloors)
@@ -96,70 +96,24 @@ func main() {
 		id = fmt.Sprintf("peer-%s-%d", localIP, os.Getpid())
 	}
 
-	// We make a channel for receiving updates on the id's of the peers that are
-	//  alive on the network
+	
 	peerUpdateCh := make(chan peers.PeerUpdate)
-	// We can disable/enable the transmitter after it has been started.
-	// This could be used to signal that we are somehow "unavailable".
 	peerTxEnable := make(chan bool)
 	go peers.Transmitter(30125, id, peerTxEnable)
 	go peers.Receiver(30125, peerUpdateCh)
 
-	//15647
-	// We make channels for sending and receiving our custom data types
-	//helloTx := make(chan HelloMsg)
-	//helloRx := make(chan HelloMsg)
-
-
-	// ... and start the transmitter/receiver pair on some port
-	// These functions can take any number of channels! It is also possible to
-	//  start multiple transmitters/receivers on the same port.
-	//go bcast.Transmitter(16569, helloTx)
-	//go bcast.Receiver(16569, helloRx)
-
 	go bcast.Transmitter(30025, GlobalInfoTx)
 	go bcast.Receiver(30025, GlobalInfoRx)
-	//16569
 
+	var _mtx sync.Mutex
 	go func() {
 		for {
+			_mtx.Lock()
 			GlobalInfoTx <- monitor.Global			
+			_mtx.Unlock()
 			time.Sleep(1 * time.Second)	
 		}
 	}()
 	go node.ElevatorServer(ch)
 	select{}
 }
-	//fmt.Println("Started")
-/*	go func() {
-		for {
-			select {
-			case p := <-peerUpdateCh:
-				fmt.Printf("Peer update:\n")
-				fmt.Printf("  Peers:    %q\n", p.Peers)
-				fmt.Printf("  New:      %q\n", p.New)
-				fmt.Printf("  Lost:     %q\n", p.Lost)
-
-			//case a := <-helloRx:
-				//fmt.Printf("Received: %#v\n", a)
-			
-			//case m := <- GlobalInfoRx:
-				
-			//	fmt.Printf("Received GlobalInfo: %#v\n", m.ID)
-			//}
-		}
-	}()
-*/
-
-
-
-/*
-TODO:
-Jostein:
-	- fsm/monitor: Semaphore integration between order clearance in monitor and
-		setDirection in fsm
-
-	- network
-	- watchdog: lookup table integration with network
-*/
-

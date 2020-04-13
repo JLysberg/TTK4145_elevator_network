@@ -5,6 +5,7 @@
 	import (
 		"fmt"
 		"math"
+		"sync"
 		"time"
 	
 		/* Setup desc. in main */
@@ -138,6 +139,8 @@
 				}
 				lightRefresh <- pressedButton.Floor
 			case msg := <-newPackets:
+				var _mtx sync.Mutex
+				_mtx.Lock()
 				/*	Only update local Global.Orders if it differs from msg.Orders */
 				if msg.Orders != Global.Orders {
 					fmt.Println("Got a network order")
@@ -163,6 +166,7 @@
 						}
 					}
 					lightRefresh <- -1
+					_mtx.Unlock()
 				}
 			case clearFloor := <-clearOrder:
 				go clearTimeout(clearFloor)

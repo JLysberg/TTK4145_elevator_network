@@ -66,7 +66,7 @@ func main() {
 		DoorTimeout:       make(chan bool),
 	}
 
-	//go node.Printer()
+	go node.Printer()
 	go node.Initialize(ch.FloorSensor, ch.LightRefresh)
 	go monitor.CostEstimator(ch.UpdateQueue)
 	go monitor.OrderServer(ch.ButtonPress, GlobalInfoRx,

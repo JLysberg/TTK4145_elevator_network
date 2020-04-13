@@ -141,37 +141,30 @@
 			case msg := <-newPackets:
 				var _mtx sync.Mutex
 				_mtx.Lock()
-				/*	Only update local Global.Orders if it differs from msg.Orders */
-				if msg.Orders != Global.Orders {
-					fmt.Println("Got a network order")
-					for msgFloor, msgFloorStates := range msg.Orders {
-						for msgElevID, msgFloorState := range msgFloorStates {
-							if !msgFloorState.Clear {
-								/*	Concatenate orders from msg into local order matrix */
-								Global.Orders[msgFloor][msgElevID].Up =
-									Global.Orders[msgFloor][msgElevID].Up || msgFloorState.Up 		
-								Global.Orders[msgFloor][msgElevID].Down =
-									Global.Orders[msgFloor][msgElevID].Down || msgFloorState.Down
-								Global.Orders[msgFloor][msgElevID].Cab =
-									Global.Orders[msgFloor][msgElevID].Cab || msgFloorState.Cab
+				for msgFloor, msgFloorStates := range msg.Orders {
+					for msgElevID, msgFloorState := range msgFloorStates {
+						if !msgFloorState.Clear {
+							/*	Concatenate orders from msg into local order matrix */
+							Global.Orders[msgFloor][msgElevID].Up =
+								Global.Orders[msgFloor][msgElevID].Up || msgFloorState.Up 		
+							Global.Orders[msgFloor][msgElevID].Down =
+								Global.Orders[msgFloor][msgElevID].Down || msgFloorState.Down
+							Global.Orders[msgFloor][msgElevID].Cab =
+								Global.Orders[msgFloor][msgElevID].Cab || msgFloorState.Cab
 
-								fmt.Println("Up order: ", Global.Orders[msgFloor][msgElevID].Up)
-								fmt.Println("Down order: ", Global.Orders[msgFloor][msgElevID].Down)
-								fmt.Println("Cab order: ", Global.Orders[msgFloor][msgElevID].Cab)
-							} else {
-								/*	Remove all up/down orders if there is a clear present */
-								for elevID := 0; elevID < config.NElevs; elevID++ {
-									Global.Orders[msgFloor][elevID].Up = false
-									Global.Orders[msgFloor][elevID].Down = false
-								}
-								/*	Also remove cab order if present */
-								Global.Orders[msgFloor][msgElevID].Cab = false
+						} else {
+							/*	Remove all up/down orders if there is a clear present */
+							for elevID := 0; elevID < config.NElevs; elevID++ {
+								Global.Orders[msgFloor][elevID].Up = false
+								Global.Orders[msgFloor][elevID].Down = false
 							}
+							/*	Also remove cab order if present */
+							Global.Orders[msgFloor][msgElevID].Cab = false
 						}
 					}
-					lightRefresh <- -1
-					_mtx.Unlock()
 				}
+				lightRefresh <- -1
+				_mtx.Unlock()
 			case clearFloor := <-clearOrder:
 				go clearTimeout(clearFloor)
 				lightRefresh <- clearFloor

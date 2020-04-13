@@ -218,7 +218,7 @@
 								lightValue = floorState.Cab &&
 									elevID == Global.ID
 							}
-							fmt.Println("Set the lights for " , button, " in floor ", floor , " to ", lightValue)
+							//fmt.Println("Set the lights for " , button, " in floor ", floor , " to ", lightValue)
 
 							elevio.SetButtonLamp(button, floor, lightValue)
 						}

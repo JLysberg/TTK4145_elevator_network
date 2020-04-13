@@ -4,19 +4,19 @@
 		"fmt"
 		"time"
 
-		"../common/config"
+		//"../common/config"
 		. "../common/types"
 		"../monitor"
-		"../../pkg/elevio"
+		//"../../pkg/elevio"
 		"../../pkg/network/peers"
-		"../../pkg/network/bcast"
-		"../../pkg/network/localip"
+		//"../../pkg/network/bcast"
+		//"../../pkg/network/localip"
 	)
 
 	type NetworkChannels struct{
 		MsgTransmitter		chan GlobalInfo
 		MsgReceiver			chan GlobalInfo
-		PeerUpdate			chan peers.PeerUpdare
+		PeerUpdate			chan peers.PeerUpdate
 		PeerTxEnable		chan bool
 	}
 
@@ -24,8 +24,8 @@
 	func SyncMessages(ch NetworkChannels, id int){
 		var(
 			sendMsg		GlobalInfo 
-			nodes		monitor.GlobalInfo.Nodes  //could be directly inserted into the send case?
-			orders		monitor.GlobalInfo.Orders
+			//nodes		monitor.Global.Nodes  //could be directly inserted into the send case?
+			//orders		monitor.Global.Orders
 			//nodes 		[config.NEleevs]
 			//orders		[config.MFloors][config.NElevs]
 		)
@@ -36,17 +36,17 @@
 		bcastTicker := time.NewTicker(500 * time.Millisecond)
 
 		select {
-		case msg := <- ch.GlobalInfoRx
+		//case msg := <- ch.MsgReceiver:
 			//update ElevLastSent?
 			//update onlineList?
 
 		case <- bcastTicker.C:
 			sendMsg.ID = id
-			sendMsg.Nodes = nodes
-			sendMsg.Orders = orders
-			ch.GlobalInfoTx <- sendMsg
+			sendMsg.Nodes = monitor.Global.Nodes   //nodes
+			sendMsg.Orders = monitor.Global.Orders //orders
+			ch.MsgTransmitter <- sendMsg
 
-		case p := <- ch.UpdatePeers:
+		case p := <- ch.PeerUpdate:
 			fmt.Printf("Peer update:\n")
 			fmt.Printf("  Peers:    %q\n", p.Peers)
 			fmt.Printf("  New:      %q\n", p.New)

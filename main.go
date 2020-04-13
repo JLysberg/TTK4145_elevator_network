@@ -3,9 +3,9 @@ package main
 import (
 	"flag"
 	"strconv"
-	"time"
-	"fmt"
-	"os"
+	//"time"
+	//"fmt"
+	//"os"
 
 	/*
 		1. Set GOPATH environment variable, e.g. to %USERPROFILE%/go. Can NOT
@@ -32,7 +32,7 @@ import (
 	"./pkg/elevio"
 	"./pkg/network/peers"
 	"./pkg/network/bcast"
-	"./pkg/network/localip"
+	//"./pkg/network/localip"
 
 )
 
@@ -79,7 +79,8 @@ func main() {
 	go monitor.CostEstimator(ch.UpdateQueue)
 	go monitor.OrderServer(ch.ButtonPress, sch.MsgReceiver,
 		ch.LightRefresh, ch.ClearOrder)
-	go sync.SyncMessages(sch.MsgTransmitter, sch.MsgReceiver, sch.PeerUpdate, id)
+	//go sync.SyncMessages(sch.MsgTransmitter, sch.MsgReceiver, sch.PeerUpdate, id)
+	go sync.SyncMessages(sch, ID)
 	go monitor.LightServer(ch.LightRefresh)
 
 	go elevio.PollButtons(ch.ButtonPress)

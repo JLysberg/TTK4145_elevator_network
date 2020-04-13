@@ -6,24 +6,28 @@ import (
 	"time"
 
 	/* Setup desc. in main */
-	"github.com/JLysberg/TTK4145_elevator_network/internal/common/config"
+/*	"github.com/JLysberg/TTK4145_elevator_network/internal/common/config"
 	. "github.com/JLysberg/TTK4145_elevator_network/internal/common/types"
 	"github.com/JLysberg/TTK4145_elevator_network/pkg/elevio"
-	/*
+	*/
 		"../common/config"
 		. "../common/types"
 		"../../pkg/elevio"
-	*/)
+)
+
+func Global() GlobalInfo{
+	return <-getGlobalCopy
+}
+
 
 func clearTimeout(floor int) {
-	Global.Orders[floor][Global.ID].Clear = true
+	Global().Orders[floor][Global().ID].Clear = true
 	timeout := time.NewTimer(config.ClearTimeout)
 	<-timeout.C
-	Global.Orders[floor][Global.ID].Clear = false
+	Global().Orders[floor][Global().ID].Clear = false
 }
 
 var Local LocalInfo
-var Global GlobalInfo
 
 /*	CostEstimator is a goroutine which continuously assigns orders from
 	the global order matrix to any node, taking multiple factors into account.
@@ -48,17 +52,17 @@ func CostEstimator(updateQueue chan<- int) {
 	for {
 		estBegin := time.Now()
 		/*	Always assign cab orders to local node */
-		for floor, floorStates := range Global.Orders {
-			if floorStates[Global.ID].Cab && !floorStates[Global.ID].Clear {
+		for floor, floorStates := range Global().Orders {
+			if floorStates[Global().ID].Cab && !floorStates[Global().ID].Clear {
 				Local.Queue[floor].Cab = true
 				updateQueue <- floor
 			}
 		}
 		/*	Cost calculation for non-cab orders */
-		for floor, floorStates := range Global.Orders {
+		for floor, floorStates := range Global().Orders {
 			for elevID, floorState := range floorStates {
 				if floorState.Clear {
-					if elevID == Global.ID {
+					if elevID == Global().ID {
 						Local.Queue[floor].Up = false
 						Local.Queue[floor].Down = false
 						Local.Queue[floor].Cab = false
@@ -67,7 +71,7 @@ func CostEstimator(updateQueue chan<- int) {
 					bestCost := int(math.Inf(1))
 					bestID := 0
 					cost := 0
-					for nodeID, node := range Global.Nodes {
+					for nodeID, node := range Global().Nodes {
 						/*	Ignore all offline nodes */
 						if !Local.OnlineList[nodeID] {
 							continue
@@ -103,7 +107,7 @@ func CostEstimator(updateQueue chan<- int) {
 						}
 					}
 					/*	Assign order to local node if optimal */
-					if bestID == Global.ID && Local.Queue[floor] != floorState {
+					if bestID == Global().ID && Local.Queue[floor] != floorState {
 						Local.Queue[floor] = floorState
 						updateQueue <- floor
 					}
@@ -123,8 +127,13 @@ func CostEstimator(updateQueue chan<- int) {
 	to guarantee that Global.Orders is always up to date with the rest of the network */
 func OrderServer(buttonPress <-chan ButtonEvent, newPackets <-chan GlobalInfo,
 	lightRefresh chan<- int, clearOrder <-chan int) {
+
+	var Global GlobalInfo
 	for {
+		//Make a copy of Global
+		GlobalCopy := GlobalInfo{}
 		select {
+		case getGlobalCopy <- GlobalCopy:
 		case pressedButton := <-buttonPress:
 			switch pressedButton.Button {
 			case BT_HallUp:
@@ -199,7 +208,7 @@ func LightServer(lightRefresh <-chan int) {
 	for {
 		select {
 		case callingFloor := <-lightRefresh:
-			for floor, floorStates := range Global.Orders {
+			for floor, floorStates := range Global().Orders {
 				/*	Skip most of the iteration if callingFloor is specified */
 				if (callingFloor != -1) && (floor != callingFloor) {
 					continue
@@ -214,7 +223,7 @@ func LightServer(lightRefresh <-chan int) {
 							lightValue = floorState.Down
 						case BT_Cab:
 							lightValue = floorState.Cab &&
-								elevID == Global.ID
+								elevID == Global().ID
 						}
 						//fmt.Println("Set the lights for " , button, " in floor ", floor , " to ", lightValue)
 

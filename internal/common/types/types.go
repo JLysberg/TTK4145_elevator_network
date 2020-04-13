@@ -5,8 +5,8 @@ import (
 	// "../config"
 
 	/* Setup desc. in main */
-	"github.com/JLysberg/TTK4145_elevator_network/internal/common/config"
-	//"../config"
+	// "github.com/JLysberg/TTK4145_elevator_network/internal/common/config"
+	"../config"
 )
 
 type MotorDirection int

@@ -14,7 +14,7 @@ import (
 		2. Pull repository with "go get github.com/JLysberg/TTK4145_elevator_network"
 		3. The following import paths should be compatible
 
-	*/
+	
 	"github.com/JLysberg/TTK4145_elevator_network/internal/common/config"
 	. "github.com/JLysberg/TTK4145_elevator_network/internal/common/types"
 	"github.com/JLysberg/TTK4145_elevator_network/internal/monitor"
@@ -25,8 +25,8 @@ import (
 
 	//"github.com/JLysberg/TTK4145_elevator_network/pkg/network/localip"
 	"github.com/JLysberg/TTK4145_elevator_network/pkg/network/bcast"
-	//"./internal/network_handler"
-	/*
+	*/
+	
 		"./internal/common/config"
 		. "./internal/common/types"
 		"./internal/node"
@@ -37,7 +37,6 @@ import (
 		"./pkg/elevio"
 		"./pkg/network/peers"
 		"./pkg/network/bcast"
-	*///"./pkg/network/localip"
 )
 
 func main() {
@@ -52,7 +51,7 @@ func main() {
 	flag.Parse()
 	ID, _ := strconv.Atoi(id)
 	//ID = 0?
-	monitor.Global.ID = ID
+	monitor.Global().ID = ID
 
 	elevio.Init("localhost:"+port, config.MFloors)
 
@@ -78,6 +77,8 @@ func main() {
 		LightRefresh:      make(chan int),
 		ClearOrder:        make(chan int),
 		DoorTimeout:       make(chan bool),
+		getGlobalCopy:     make(chan GlobalInfo),
+
 	}
 
 	//go node.Printer()

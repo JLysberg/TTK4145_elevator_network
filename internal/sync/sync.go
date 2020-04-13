@@ -5,17 +5,15 @@ import (
 	"os"
 	"time"
 
-	. "github.com/JLysberg/TTK4145_elevator_network/internal/common/types"
+/*	. "github.com/JLysberg/TTK4145_elevator_network/internal/common/types"
 	"github.com/JLysberg/TTK4145_elevator_network/internal/monitor"
 	"github.com/JLysberg/TTK4145_elevator_network/pkg/network/localip"
 	"github.com/JLysberg/TTK4145_elevator_network/pkg/network/peers"
-	//"../common/config"
-	//. "../common/types"
-	//"../monitor"
-	//"../../pkg/elevio"
-	//"../../pkg/network/peers"
-	//"../../pkg/network/bcast"
-	//"../../pkg/network/localip"
+*/	
+	. "../common/types"
+	"../monitor"
+	"../../pkg/network/peers"
+	"../../pkg/network/localip"
 )
 
 type NetworkChannels struct {
@@ -30,7 +28,7 @@ func SyncMessages(ch NetworkChannels, id string) {
 		sendMsg GlobalInfo
 	//nodes		monitor.Global.Nodes  //could be directly inserted into the send case?
 	//orders		monitor.Global.Orders
-	//nodes 		[config.NEleevs]
+	//nodes 		[config.NElevs]
 	//orders		[config.MFloors][config.NElevs]
 	)
 
@@ -47,8 +45,8 @@ func SyncMessages(ch NetworkChannels, id string) {
 		case <-bcastTicker.C: //is never triggered.
 			fmt.Println("send message")
 			sendMsg.ID = monitor.Global().ID
-			sendMsg.Nodes = monitor.Global.Nodes   //nodes
-			sendMsg.Orders = monitor.Global.Orders //orders
+			sendMsg.Nodes = monitor.Global().Nodes   //nodes
+			sendMsg.Orders = monitor.Global().Orders //orders
 			ch.MsgTransmitter <- sendMsg
 
 		case p := <-ch.PeerUpdate:

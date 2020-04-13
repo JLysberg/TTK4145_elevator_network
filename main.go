@@ -14,7 +14,7 @@ import (
 		2. Pull repository with "go get github.com/JLysberg/TTK4145_elevator_network"
 		3. The following import paths should be compatible
 
-	
+	*/
 	"github.com/JLysberg/TTK4145_elevator_network/internal/common/config"
 	. "github.com/JLysberg/TTK4145_elevator_network/internal/common/types"
 	"github.com/JLysberg/TTK4145_elevator_network/internal/monitor"
@@ -25,8 +25,7 @@ import (
 
 	//"github.com/JLysberg/TTK4145_elevator_network/pkg/network/localip"
 	"github.com/JLysberg/TTK4145_elevator_network/pkg/network/bcast"
-	*/
-	
+	/*
 		"./internal/common/config"
 		. "./internal/common/types"
 		"./internal/node"
@@ -37,7 +36,7 @@ import (
 		"./pkg/elevio"
 		"./pkg/network/peers"
 		"./pkg/network/bcast"
-)
+	*/)
 
 func main() {
 
@@ -50,8 +49,7 @@ func main() {
 	flag.StringVar(&port, "port", "15657", "init port")
 	flag.Parse()
 	ID, _ := strconv.Atoi(id)
-	//ID = 0?
-	monitor.Global().ID = ID
+	//monitor.Global().ID = ID //must be set in OrderServer
 
 	elevio.Init("localhost:"+port, config.MFloors)
 
@@ -59,7 +57,7 @@ func main() {
 	// 10.100.23.174
 	//test_network_1: .223 and .247
 
-	//go run main.go -id=1 -port=15658
+	//go run main.go --port=15658 -id=1
 
 	sch := sync.NetworkChannels{
 		MsgTransmitter: make(chan GlobalInfo),
@@ -67,7 +65,6 @@ func main() {
 		PeerUpdate:     make(chan peers.PeerUpdate),
 		PeerTxEnable:   make(chan bool),
 	}
-	//OutgoingMsg := make(chan<- GlobalInfo)
 
 	ch := NodeChannels{
 		ButtonPress:       make(chan ButtonEvent),
@@ -77,18 +74,16 @@ func main() {
 		LightRefresh:      make(chan int),
 		ClearOrder:        make(chan int),
 		DoorTimeout:       make(chan bool),
-		getGlobalCopy:     make(chan GlobalInfo),
-
+		//getGlobalCopy:     make(chan GlobalInfo),
 	}
 
 	//go node.Printer()
 	go node.Initialize(ch.FloorSensor, ch.LightRefresh)
 	go monitor.CostEstimator(ch.UpdateQueue)
-	go monitor.OrderServer(ch.ButtonPress, sch.MsgReceiver,
+	go monitor.OrderServer(ID, ch.ButtonPress, sch.MsgReceiver,
 		ch.LightRefresh, ch.ClearOrder)
 	//go sync.SyncMessages(sch.MsgTransmitter, sch.MsgReceiver, sch.PeerUpdate, id)
-	go sync.SyncMessages(sch, id)
-	//go sync.SendMessage(OutgoingMsg)
+	go sync.SyncMessages(sch, ID)
 	go monitor.LightServer(ch.LightRefresh)
 
 	go elevio.PollButtons(ch.ButtonPress)

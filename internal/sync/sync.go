@@ -3,18 +3,19 @@ package sync
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"time"
 
-/*	. "github.com/JLysberg/TTK4145_elevator_network/internal/common/types"
+	. "github.com/JLysberg/TTK4145_elevator_network/internal/common/types"
 	"github.com/JLysberg/TTK4145_elevator_network/internal/monitor"
 	"github.com/JLysberg/TTK4145_elevator_network/pkg/network/localip"
 	"github.com/JLysberg/TTK4145_elevator_network/pkg/network/peers"
-*/	
-	. "../common/types"
-	"../monitor"
-	"../../pkg/network/peers"
-	"../../pkg/network/localip"
-)
+	/*
+		"../../pkg/network/localip"
+		"../../pkg/network/peers"
+		. "../common/types"
+		"../monitor"
+	*/)
 
 type NetworkChannels struct {
 	MsgTransmitter chan GlobalInfo
@@ -23,30 +24,28 @@ type NetworkChannels struct {
 	PeerTxEnable   chan bool
 }
 
-func SyncMessages(ch NetworkChannels, id string) {
+func SyncMessages(ch NetworkChannels, id int) {
 	var (
 		sendMsg GlobalInfo
-	//nodes		monitor.Global.Nodes  //could be directly inserted into the send case?
-	//orders		monitor.Global.Orders
-	//nodes 		[config.NElevs]
-	//orders		[config.MFloors][config.NElevs]
+		//nodes 		[config.NElevs]
+		//orders		[config.MFloors][config.NElevs]
 	)
 
-	//timeout := make(chan bool)
-	//go func() { time.Sleep(1 * time.Second); timeout <- true }()
-
 	bcastTicker := time.NewTicker(500 * time.Millisecond)
+
 	for {
 		select {
 		//case msg := <- ch.MsgReceiver:
 		//update ElevLastSent?
 		//update onlineList?
 
-		case <-bcastTicker.C: //is never triggered.
-			fmt.Println("send message")
-			sendMsg.ID = monitor.Global().ID
-			sendMsg.Nodes = monitor.Global().Nodes   //nodes
-			sendMsg.Orders = monitor.Global().Orders //orders
+		case <-bcastTicker.C:
+			fmt.Println("Outgoing message")
+			/*
+				sendMsg.Nodes = monitor.Global().Nodes  - nodes
+				sendMsg.Orders = monitor.Global().Orders -orders
+			*/
+			sendMsg = monitor.Global()
 			ch.MsgTransmitter <- sendMsg
 
 		case p := <-ch.PeerUpdate:
@@ -55,35 +54,17 @@ func SyncMessages(ch NetworkChannels, id string) {
 			fmt.Printf("  New:      %q\n", p.New)
 			fmt.Printf("  Lost:     %q\n", p.Lost)
 
-			if id == "" {
+			localid := strconv.Itoa(id)
+			if localid == "" {
 				localIP, err := localip.LocalIP()
 				if err != nil {
 					fmt.Println(err)
 					localIP = "DISCONNECTED"
 				}
-				id = fmt.Sprintf("peer-%s-%d", localIP, os.Getpid())
+				localid = fmt.Sprintf("peer-%s-%d", localIP, os.Getpid())
 			}
 
 		}
 	}
 
 }
-
-/*func SendMessage(OutgoingMsg chan<- GlobalInfo){
-	var (
-        	_mtx 	        sync.Mutex
-		sendMsg  	GlobalInfo
-	)
-	fmt.Println("Sending...")
-	for {
-		sendMsg = monitor.Global
-		_mtx.Lock()
-		//sendMsg.ID = monitor.Global.ID
-		//sendMsg.Nodes = monitor.Global.Nodes
-		//sendMsg.Orders = monitor.Global.Orders
-		OutgoingMsg<- sendMsg
-		_mtx.Unlock()
-
-		time.Sleep(500 * time.Millisecond)
-	}
-}*/

@@ -64,6 +64,7 @@ func main() {
 		PeerUpdate: 		make(chan peers.PeerUpdate),
 		PeerTxEnable:		make(chan bool),
 	}
+	OutgoingMsg := make(chan<-GlobalInfo) 
 	
 	ch := NodeChannels{
 		ButtonPress:       make(chan ButtonEvent),
@@ -81,7 +82,8 @@ func main() {
 	go monitor.OrderServer(ch.ButtonPress, sch.MsgReceiver,
 		ch.LightRefresh, ch.ClearOrder)
 	//go sync.SyncMessages(sch.MsgTransmitter, sch.MsgReceiver, sch.PeerUpdate, id)
-	go sync.SyncMessages(sch, ID)
+	go sync.SyncMessages(sch, id)
+	go sync.SendMessage(OutgoingMsg)
 	go monitor.LightServer(ch.LightRefresh)
 
 	go elevio.PollButtons(ch.ButtonPress)

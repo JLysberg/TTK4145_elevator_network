@@ -3,6 +3,8 @@ package sync
 import (
 	"fmt"
 	"time"
+	"sync"
+	"os"
 
 	//"../common/config"
 	. "../common/types"
@@ -10,7 +12,7 @@ import (
 	//"../../pkg/elevio"
 	"../../pkg/network/peers"
 	//"../../pkg/network/bcast"
-	//"../../pkg/network/localip"
+	"../../pkg/network/localip"
 )
 
 type NetworkChannels struct{
@@ -21,7 +23,7 @@ type NetworkChannels struct{
 }
 
 
-func SyncMessages(ch NetworkChannels, id int){
+func SyncMessages(ch NetworkChannels, id string){
 	//var(
 		//sendMsg		GlobalInfo 
 		//nodes		monitor.Global.Nodes  //could be directly inserted into the send case?
@@ -41,7 +43,7 @@ func SyncMessages(ch NetworkChannels, id int){
 		//update onlineList?
 
 	/*case <- bcastTicker.C: //is never triggered.
-		sendMsg.ID = id
+		sendMsg.ID = monitor.Global.ID
 		sendMsg.Nodes = monitor.Global.Nodes   //nodes
 		sendMsg.Orders = monitor.Global.Orders //orders
 		ch.MsgTransmitter <- sendMsg
@@ -51,7 +53,7 @@ func SyncMessages(ch NetworkChannels, id int){
 		fmt.Printf("  Peers:    %q\n", p.Peers)
 		fmt.Printf("  New:      %q\n", p.New)
 		fmt.Printf("  Lost:     %q\n", p.Lost)
-		/*
+		
 		if id == "" {
 			localIP, err := localip.LocalIP()
 			if err != nil {
@@ -60,19 +62,24 @@ func SyncMessages(ch NetworkChannels, id int){
 			}
 			id = fmt.Sprintf("peer-%s-%d", localIP, os.Getpid())
 		}
-		*/
+		
 	}
 
 }
 
-SendMessage(MsgTransmitter chan<- GlobalInfo){
+func SendMessage(OutgoingMsg chan<- GlobalInfo){
+	var (
+        	_mtx 	        sync.Mutex
+		sendMsg  	GlobalInfo
+	)
+	fmt.Println("Sending...")
 	for {
 		sendMsg = monitor.Global
 		_mtx.Lock()
 		//sendMsg.ID = monitor.Global.ID
 		//sendMsg.Nodes = monitor.Global.Nodes 
 		//sendMsg.Orders = monitor.Global.Orders
-		MsgTransmitter <- sendMsg
+		OutgoingMsg<- sendMsg
 		_mtx.Unlock()
 	
 		time.Sleep(500 * time.Millisecond)

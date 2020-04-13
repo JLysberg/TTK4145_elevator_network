@@ -54,6 +54,7 @@ func main() {
 
 	// 10.100.23.149
 	// 10.100.23.174
+	//test_network_1: .223 and .247
 
 	//go run main.go -id=1 -port=15658
 

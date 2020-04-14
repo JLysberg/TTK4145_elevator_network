@@ -6,16 +6,16 @@ import (
 	"strconv"
 	"time"
 
-	/*. "github.com/JLysberg/TTK4145_elevator_network/internal/common/types"
+	. "github.com/JLysberg/TTK4145_elevator_network/internal/common/types"
 	"github.com/JLysberg/TTK4145_elevator_network/internal/monitor"
 	"github.com/JLysberg/TTK4145_elevator_network/pkg/network/localip"
 	"github.com/JLysberg/TTK4145_elevator_network/pkg/network/peers"
-	/*/
+	/*
 		"../../pkg/network/localip"
 		"../../pkg/network/peers"
 		. "../common/types"
 		"../monitor"
-	)
+	*/)
 
 type NetworkChannels struct {
 	MsgTransmitter chan GlobalInfo
@@ -31,7 +31,8 @@ func SyncMessages(ch NetworkChannels, id int) {
 		//orders		[config.MFloors][config.NElevs]
 	)
 
-	bcastTicker := time.NewTicker(500 * time.Millisecond)
+	//bcastTicker := time.NewTicker(500 * time.Millisecond)
+	bcastTicker := time.NewTicker(2 * time.Second)
 
 	for {
 		select {
@@ -40,7 +41,7 @@ func SyncMessages(ch NetworkChannels, id int) {
 		//update onlineList?
 
 		case <-bcastTicker.C:
-			fmt.Println("Outgoing message")
+			fmt.Println("Broadcasting message")
 			/*
 				sendMsg.Nodes = monitor.Global().Nodes  - nodes
 				sendMsg.Orders = monitor.Global().Orders -orders

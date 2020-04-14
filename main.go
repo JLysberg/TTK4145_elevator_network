@@ -15,7 +15,7 @@ import (
 		3. The following import paths should be compatible
 
 	*/
-	/*"github.com/JLysberg/TTK4145_elevator_network/internal/common/config"
+	"github.com/JLysberg/TTK4145_elevator_network/internal/common/config"
 	. "github.com/JLysberg/TTK4145_elevator_network/internal/common/types"
 	"github.com/JLysberg/TTK4145_elevator_network/internal/monitor"
 	"github.com/JLysberg/TTK4145_elevator_network/internal/node"
@@ -25,7 +25,7 @@ import (
 
 	//"github.com/JLysberg/TTK4145_elevator_network/pkg/network/localip"
 	"github.com/JLysberg/TTK4145_elevator_network/pkg/network/bcast"
-	/*/
+	/*
 		"./internal/common/config"
 		. "./internal/common/types"
 		"./internal/node"
@@ -35,8 +35,7 @@ import (
 		"./internal/sync"
 		"./pkg/elevio"
 		"./pkg/network/peers"
-		"./pkg/network/bcast"
-	)
+		"./pkg/network/bcast"*/)
 
 func main() {
 
@@ -49,7 +48,6 @@ func main() {
 	flag.StringVar(&port, "port", "15657", "init port")
 	flag.Parse()
 	ID, _ := strconv.Atoi(id)
-	//monitor.Global().ID = ID //must be set in OrderServer
 
 	elevio.Init("localhost:"+port, config.MFloors)
 
@@ -58,6 +56,7 @@ func main() {
 	//test_network_1: .223 and .247
 
 	//go run main.go --port=15658 -id=1
+	//Simulator: qwe(UP) - sdf (DOWN) - zxc (CAB)
 
 	sch := sync.NetworkChannels{
 		MsgTransmitter: make(chan GlobalInfo),
@@ -74,7 +73,6 @@ func main() {
 		LightRefresh:      make(chan int),
 		ClearOrder:        make(chan int),
 		DoorTimeout:       make(chan bool),
-		//getGlobalCopy:     make(chan GlobalInfo),
 	}
 
 	//go node.Printer()

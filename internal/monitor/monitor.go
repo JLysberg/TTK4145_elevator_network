@@ -6,14 +6,13 @@ import (
 	"time"
 
 	/* Setup desc. in main */
-	/*"github.com/JLysberg/TTK4145_elevator_network/internal/common/config"
+	"github.com/JLysberg/TTK4145_elevator_network/internal/common/config"
 	. "github.com/JLysberg/TTK4145_elevator_network/internal/common/types"
 	"github.com/JLysberg/TTK4145_elevator_network/pkg/elevio"
-	*/
+	/*
 		"../common/config"
 		. "../common/types"
-		"../../pkg/elevio"
-	)
+		"../../pkg/elevio"*/)
 
 var getGlobalCopy = make(chan GlobalInfo)
 
@@ -123,7 +122,7 @@ func OrderServer(id int, buttonPress <-chan ButtonEvent, newPackets <-chan Globa
 	lightRefresh chan<- int, clearOrder <-chan int) {
 	Global := GlobalInfo{}
 	Global.ID = id
-
+	//Global.Nodes ?
 
 	for {
 		//Make a copy of global
@@ -146,22 +145,26 @@ func OrderServer(id int, buttonPress <-chan ButtonEvent, newPackets <-chan Globa
 		case msg := <-newPackets:
 			/*	Only update local Global.Orders if it differs from msg.Orders */
 
-			//print both registered local and global orders
-			/*
+			if msg.ID != Global.ID {
+				/* comments from testing w. two elevators
+				elevator w. id=0 does never reach inside the if-block
+				elevator w. id=1 does reach inside, but bool values in print never change
+				*/
+
+				//print both registered local and global orders
 				fmt.Println("Got a network order")
+				fmt.Println("Me, id:", id)
 				for i, _ := range Global.Orders {
-					fmt.Println("Elev 0, Local:", Global.Orders[i][0],
-						"Network:", msg.Orders[i][0])
+					fmt.Println("F", i, "Local:", Global.Orders[i][id],
+						"Network:", msg.Orders[i][id])
 				}
+				fmt.Println("Hi from id:", msg.ID)
 				for i, _ := range Global.Orders {
-					fmt.Println("Elev 1, Local:", Global.Orders[i][1],
-						"Network:", msg.Orders[i][1])
+					fmt.Println("F", i, "Local:", Global.Orders[i][msg.ID],
+						"Network:", msg.Orders[i][msg.ID])
 				}
 				fmt.Println()
-			*/
-			//
-			if msg.ID != Global.ID {
-				fmt.Println("Got a network order")
+
 				for msgFloor, msgFloorStates := range msg.Orders {
 					for msgElevID, msgFloorState := range msgFloorStates {
 						if !msgFloorState.Clear {
@@ -187,7 +190,7 @@ func OrderServer(id int, buttonPress <-chan ButtonEvent, newPackets <-chan Globa
 				lightRefresh <- -1
 			}
 		case clearFloor := <-clearOrder:
-			
+
 			Global.Orders[clearFloor][Global.ID].Clear = true
 			timeout := time.NewTimer(config.ClearTimeout)
 			<-timeout.C

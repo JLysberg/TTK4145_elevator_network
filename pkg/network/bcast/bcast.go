@@ -7,8 +7,8 @@ import (
 	"reflect"
 	"strings"
 
-	//"github.com/JLysberg/TTK4145_elevator_network/pkg/network/conn"
-	"../conn"
+	"github.com/JLysberg/TTK4145_elevator_network/pkg/network/conn"
+	//"../conn"
 )
 
 // Encodes received values from `chans` into type-tagged JSON, then broadcasts

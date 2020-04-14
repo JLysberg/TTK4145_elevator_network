@@ -7,8 +7,8 @@ import (
 	"time"
 
 	/* Setup desc. in main */
-	. "github.com/JLysberg/TTK4145_elevator_network/internal/common/types"
-	//. "../../internal/common/types"
+	//. "github.com/JLysberg/TTK4145_elevator_network/internal/common/types"
+	. "../../internal/common/types"
 )
 
 const _pollRate = 20 * time.Millisecond

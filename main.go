@@ -15,7 +15,7 @@ import (
 		3. The following import paths should be compatible
 
 	*/
-	"github.com/JLysberg/TTK4145_elevator_network/internal/common/config"
+	/*"github.com/JLysberg/TTK4145_elevator_network/internal/common/config"
 	. "github.com/JLysberg/TTK4145_elevator_network/internal/common/types"
 	"github.com/JLysberg/TTK4145_elevator_network/internal/monitor"
 	"github.com/JLysberg/TTK4145_elevator_network/internal/node"
@@ -25,7 +25,7 @@ import (
 
 	//"github.com/JLysberg/TTK4145_elevator_network/pkg/network/localip"
 	"github.com/JLysberg/TTK4145_elevator_network/pkg/network/bcast"
-	/*
+	/*/
 		"./internal/common/config"
 		. "./internal/common/types"
 		"./internal/node"
@@ -36,7 +36,7 @@ import (
 		"./pkg/elevio"
 		"./pkg/network/peers"
 		"./pkg/network/bcast"
-	*/)
+	)
 
 func main() {
 

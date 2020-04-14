@@ -6,8 +6,8 @@ import (
 	"sort"
 	"time"
 
-	"github.com/JLysberg/TTK4145_elevator_network/pkg/network/conn"
-	//"../conn"
+	//"github.com/JLysberg/TTK4145_elevator_network/pkg/network/conn"
+	"../conn"
 )
 
 type PeerUpdate struct {

@@ -14,18 +14,62 @@ import (
 		. "../common/types"
 		"../../pkg/elevio"*/)
 
+var getQueueCopy = make(chan []FloorState)
 var getGlobalCopy = make(chan GlobalInfo)
 
+func createQueueCopy(queue []FloorState) []FloorState {
+	copy := make([]FloorState, len(queue))
+	for i, k := range queue {
+		copy[i] = k
+	}
+	return copy
+}
+
+func createGlobalCopy(global GlobalInfo) GlobalInfo {
+	copy := global
+	copy.Orders = make([][]FloorState, len(global.Orders))
+	copy.Nodes = make([]LocalInfo, len(global.Nodes))
+	for i, v := range global.Orders {
+		copy.Orders[i] = make([]FloorState, len(v))
+		for j, k := range v {
+			copy.Orders[i][j] = k
+		}
+	}
+	for i, v := range global.Nodes {
+		copy.Nodes[i] = v
+	}
+	return copy
+}
+
+func equalOrderMatrix(m1 [][]FloorState, m2 [][]FloorState) bool {
+	if len(m1) == len(m2) && len(m1[0]) == len(m2[0]) {
+		for i, v := range m1 {
+			for j, k := range v {
+				if m2[i][j] != k {
+					return false
+				}
+			}
+		}
+	} else {
+		return false
+	}
+	return true
+}
+
+/*	Queue gives a call to CostEstimator to return a copy of queue */
+func Queue() []FloorState {
+	return <-getQueueCopy
+}
+
+/*	Global gives a call to CostEstimator to return a copy of global */
 func Global() GlobalInfo {
 	return <-getGlobalCopy
 }
 
-var Local LocalInfo
-
-/*	CostEstimator is a goroutine which continuously assigns orders from
+/*	CostEstimator is a goroutine which continuously assigns orders from 
 	the global order matrix to any node, taking multiple factors into account.
 	All active orders are always assigned to the elevator with the least cost.
-	The responsibility of CostEstimator is to guarantee that Local.Queue
+	The responsibility of CostEstimator is to guarantee that queue 
 	is always up to date.
 
 	Cost = distance cost + state cost:
@@ -41,34 +85,46 @@ var Local LocalInfo
 		Stopped			+1
 		Has passed		+5
 		NOTE: (Has passed includes case of passing order in opposite direction) */
-func CostEstimator(updateQueue chan<- int) {
+func CostEstimator(updateQueue chan<- []FloorState) {
+	queue := make([]FloorState, config.MFloors)
 	for {
 		estBegin := time.Now()
+		/*	Create copy of queue and pass on if there is a receiver available */
+		queueCopy := createQueueCopy(queue)
+		select {
+		case getQueueCopy <- queueCopy:
+		default:
+		}
+		/*	Request a copy of Global from OrderServer */
+		globalCopy := Global()
 		/*	Always assign cab orders to local node */
-		for floor, floorStates := range Global().Orders {
-			if floorStates[Global().ID].Cab && !floorStates[Global().ID].Clear {
-				Local.Queue[floor].Cab = true
-				updateQueue <- floor
+		for floor, floorStates := range globalCopy.Orders {
+			if floorStates[globalCopy.ID].Cab && !floorStates[globalCopy.ID].Clear &&
+				!queue[floor].Cab {
+				queue[floor].Cab = true
+				updateQueue <- createQueueCopy(queue)
 			}
 		}
 		/*	Cost calculation for non-cab orders */
-		for floor, floorStates := range Global().Orders {
+		for floor, floorStates := range globalCopy.Orders {
 			for elevID, floorState := range floorStates {
 				if floorState.Clear {
-					if elevID == Global().ID {
-						Local.Queue[floor].Up = false
-						Local.Queue[floor].Down = false
-						Local.Queue[floor].Cab = false
+					if elevID == globalCopy.ID &&
+					   (queue[floor].Up || queue[floor].Down || queue[floor].Cab){
+						queue[floor].Up = false
+						queue[floor].Down = false
+						queue[floor].Cab = false
+						updateQueue <- createQueueCopy(queue)
 					}
 				} else if floorState.Up || floorState.Down {
 					bestCost := int(math.Inf(1))
 					bestID := 0
 					cost := 0
-					for nodeID, node := range Global().Nodes {
+					for nodeID, node := range globalCopy.Nodes {
 						/*	Ignore all offline nodes */
-						if !Local.OnlineList[nodeID] {
-							continue
-						}
+						// if !Local.OnlineList[nodeID] {
+						// 	continue
+						// }
 
 						/*	Calculate distance cost */
 						floorDiff := int(math.Abs(float64(node.Floor - floor)))
@@ -100,9 +156,10 @@ func CostEstimator(updateQueue chan<- int) {
 						}
 					}
 					/*	Assign order to local node if optimal */
-					if bestID == Global().ID && Local.Queue[floor] != floorState {
-						Local.Queue[floor] = floorState
-						updateQueue <- floor
+					if bestID == globalCopy.ID && queue[floor] != floorState {
+						queue[floor] = floorState
+						queueCopy := createQueueCopy(queue)
+						updateQueue <- queueCopy
 					}
 				}
 			}
@@ -115,96 +172,80 @@ func CostEstimator(updateQueue chan<- int) {
 	}
 }
 
-/*	OrderServer handles all incoming orders. This includes all new local orders
-	as well as incoming network packets. The responsibility of OrderServer is
-	to guarantee that Global.Orders is always up to date with the rest of the network */
-func OrderServer(id int, buttonPress <-chan ButtonEvent, newPackets <-chan GlobalInfo,
-	lightRefresh chan<- int, clearOrder <-chan int) {
-	Global := GlobalInfo{}
-	Global.ID = id
-	//Global.Nodes ?
+/*	OrderServer handles all incoming orders. This includes all new local orders 
+	as well as incoming network packets. The responsibility of OrderServer is 
+	to guarantee that global.Orders is always up to date with the rest of the network */
+func OrderServer(id int, buttonPress <-chan ButtonEvent, newPackets <-chan []byte,
+				  lightRefresh chan<- int, clearOrder <-chan int) {
+	global := GlobalInfo {
+		ID: 	id,
+		Nodes: 	make([]LocalInfo, config.NElevs),
+		Orders: make([][]FloorState, config.MFloors),
+	}
+	for i := range global.Orders {
+		global.Orders[i] = make([]FloorState, config.NElevs)
+	}
 
 	for {
-		//Make a copy of global
-		globalCopy := createGlobalCopy(Global)
+		/*	Create copy of global and pass on if there is a receiver available */
+		globalCopy := createGlobalCopy(global)
 		select {
-		//send copy when there is a receiver available for this channel
 		case getGlobalCopy <- globalCopy:
-
 		case pressedButton := <-buttonPress:
 			switch pressedButton.Button {
 			case BT_HallUp:
-				Global.Orders[pressedButton.Floor][Global.ID].Up = true
+				global.Orders[pressedButton.Floor][global.ID].Up = true
 			case BT_HallDown:
-				Global.Orders[pressedButton.Floor][Global.ID].Down = true
+				global.Orders[pressedButton.Floor][global.ID].Down = true
 			case BT_Cab:
-				Global.Orders[pressedButton.Floor][Global.ID].Cab = true
+				global.Orders[pressedButton.Floor][global.ID].Cab = true
 			}
 			lightRefresh <- pressedButton.Floor
-
-		case msg := <-newPackets:
-			/*	Only update local Global.Orders if it differs from msg.Orders */
-			fmt.Println("Received Packet", msg.ID)
-			if msg.ID != Global.ID {
-				/* comments from testing w. two elevators
-				elevator w. -id=0 does never reach inside the if-block
-				elevator w. -id=1 does reach inside, but bool values in print never change
-				*/
-
-				//print both registered local and global orders
-				fmt.Println("Got a network order")
-				fmt.Println("LocalOrders, id:", id)
-				for i, _ := range Global.Orders {
-					fmt.Println("F", i, "Elev:", msg.ID, Global.Orders[i][msg.ID], "Elev:", id, Global.Orders[i][id])
-				}
-				fmt.Println("Hello from the network from id:", msg.ID, " - I have these registered orders")
-				for i, _ := range Global.Orders {
-					fmt.Println("F", i,
-						"Elev:", msg.ID, msg.Orders[i][msg.ID], "Elev:", id, msg.Orders[i][id])
-				}
-				fmt.Println()
-
+		case receivedPackage := <-newPackets:
+			/*	Only update local global.Orders if it differs from msg.Orders */
+			if !equalOrderMatrix(msg.Orders, global.Orders) {
 				for msgFloor, msgFloorStates := range msg.Orders {
 					for msgElevID, msgFloorState := range msgFloorStates {
 						if !msgFloorState.Clear {
 							/*	Concatenate orders from msg into local order matrix */
-							Global.Orders[msgFloor][msgElevID].Up =
-								Global.Orders[msgFloor][msgElevID].Up || msgFloorState.Up
-							Global.Orders[msgFloor][msgElevID].Down =
-								Global.Orders[msgFloor][msgElevID].Down || msgFloorState.Down
-							Global.Orders[msgFloor][msgElevID].Cab =
-								Global.Orders[msgFloor][msgElevID].Cab || msgFloorState.Cab
-						} //else {
-						//Should probably be done in the next case?
-						/*	Remove all up/down orders if there is a clear present */
-						//for elevID := 0; elevID < config.NElevs; elevID++ {
-						//Global.Orders[msgFloor][elevID].Up = false
-						//Global.Orders[msgFloor][elevID].Down = false
-						//}
-						/*	Also remove cab order if present */
-						//Global.Orders[msgFloor][msgElevID].Cab = false
-						//}
+							global.Orders[msgFloor][msgElevID].Up =
+								global.Orders[msgFloor][msgElevID].Up || msgFloorState.Up 		
+							global.Orders[msgFloor][msgElevID].Down =
+								global.Orders[msgFloor][msgElevID].Down || msgFloorState.Down
+							global.Orders[msgFloor][msgElevID].Cab =
+								global.Orders[msgFloor][msgElevID].Cab || msgFloorState.Cab
+						} else {
+							/*	Remove all up/down orders if there is a clear present */
+							for elevID := 0; elevID < config.NElevs; elevID++ {
+								global.Orders[msgFloor][elevID].Up = false
+								global.Orders[msgFloor][elevID].Down = false
+							}
+							/*	Also remove cab order if present */
+							global.Orders[msgFloor][msgElevID].Cab = false
+						}
 					}
 				}
 				lightRefresh <- -1
 			}
 		case clearFloor := <-clearOrder:
-
-			Global.Orders[clearFloor][Global.ID].Clear = true
-			timeout := time.NewTimer(config.ClearTimeout)
-			<-timeout.C
-			Global.Orders[clearFloor][Global.ID].Clear = false
-
+			/*	Set clear value in global which is removed after 1 second 
+				OBS: Techically, this solution may result in read/write conflicts with global*/
+			go func() {
+				global.Orders[clearFloor][global.ID].Clear = true
+				timeout := time.NewTimer(config.ClearTimeout)
+				<-timeout.C
+				global.Orders[clearFloor][global.ID].Clear = false
+			}()
 			lightRefresh <- clearFloor
 			/*	The following block might be superfluous when networks are introduced*/
 			/********************************************/
 			/*	Remove all up/down orders if there is a clear present */
 			for elevID := 0; elevID < config.NElevs; elevID++ {
-				Global.Orders[clearFloor][elevID].Up = false
-				Global.Orders[clearFloor][elevID].Down = false
+				global.Orders[clearFloor][elevID].Up = false
+				global.Orders[clearFloor][elevID].Down = false
 			}
 			/*	Also remove cab order if present */
-			Global.Orders[clearFloor][Global.ID].Cab = false
+			global.Orders[clearFloor][global.ID].Cab = false
 			/*********************************************/
 		}
 	}
@@ -229,7 +270,9 @@ func LightServer(lightRefresh <-chan int) {
 	for {
 		select {
 		case callingFloor := <-lightRefresh:
-			for floor, floorStates := range Global().Orders {
+			/*	Request a copy of global from OrderServer */
+			globalCopy := Global()
+			for floor, floorStates := range globalCopy.Orders {
 				/*	Skip most of the iteration if callingFloor is specified */
 				if (callingFloor != -1) && (floor != callingFloor) {
 					continue
@@ -244,7 +287,7 @@ func LightServer(lightRefresh <-chan int) {
 							lightValue = floorState.Down
 						case BT_Cab:
 							lightValue = floorState.Cab &&
-								elevID == Global().ID
+								elevID == globalCopy.ID
 						}
 						//fmt.Println("Set the lights for " , button, " in floor ", floor , " to ", lightValue)
 

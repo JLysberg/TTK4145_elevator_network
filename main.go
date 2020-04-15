@@ -67,16 +67,17 @@ func main() {
 
 	ch := NodeChannels{
 		ButtonPress:       make(chan ButtonEvent),
-		UpdateQueue:       make(chan int),
+		UpdateQueue:          make(chan []FloorState),
 		FloorSensor:       make(chan int),
 		ObstructionSwitch: make(chan bool),
 		LightRefresh:      make(chan int),
 		ClearOrder:        make(chan int),
-		DoorTimeout:       make(chan bool),
+		DoorOpen:       make(chan bool),
 	}
 
-	//go node.Printer()
 	go node.Initialize(ch.FloorSensor, ch.LightRefresh)
+	// go node.Printer()
+
 	go monitor.CostEstimator(ch.UpdateQueue)
 	go monitor.OrderServer(ID, ch.ButtonPress, sch.MsgReceiver,
 		ch.LightRefresh, ch.ClearOrder)
@@ -96,13 +97,3 @@ func main() {
 	go node.ElevatorServer(ch)
 	select {}
 }
-
-/*
-TODO:
-Jostein:
-	- fsm/monitor: Semaphore integration between order clearance in monitor and
-		setDirection in fsm
-
-	- network
-	- watchdog: lookup table integration with network
-*/

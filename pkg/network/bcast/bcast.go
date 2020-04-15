@@ -35,7 +35,10 @@ func Transmitter(port int, chans ...interface{}) {
 	addr, _ := net.ResolveUDPAddr("udp4", fmt.Sprintf("255.255.255.255:%d", port))
 	for {
 		chosen, value, _ := reflect.Select(selectCases)
-		buf, _ := json.Marshal(value.Interface())
+		buf, err := json.Marshal(value.Interface())
+		if err != nil {
+			panic(err)
+		}
 		conn.WriteTo([]byte(typeNames[chosen]+string(buf)), addr)
 	}
 }
@@ -45,7 +48,7 @@ func Transmitter(port int, chans ...interface{}) {
 func Receiver(port int, chans ...interface{}) {
 	checkArgs(chans...)
 
-	var buf [1024]byte
+	var buf [2048]byte
 	conn := conn.DialBroadcastUDP(port)
 	for {
 		n, _, e := conn.ReadFrom(buf[0:])
@@ -57,7 +60,11 @@ func Receiver(port int, chans ...interface{}) {
 			typeName := T.String()
 			if strings.HasPrefix(string(buf[0:n])+"{", typeName) {
 				v := reflect.New(T)
-				json.Unmarshal(buf[len(typeName):n], v.Interface())
+				err := json.Unmarshal(buf[len(typeName):n], v.Interface())
+				if err != nil {
+					fmt.Println(string(buf[0:n]))
+					panic(err)
+				}
 
 				reflect.Select([]reflect.SelectCase{{
 					Dir:  reflect.SelectSend,

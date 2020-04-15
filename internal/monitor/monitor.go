@@ -144,24 +144,23 @@ func OrderServer(id int, buttonPress <-chan ButtonEvent, newPackets <-chan Globa
 
 		case msg := <-newPackets:
 			/*	Only update local Global.Orders if it differs from msg.Orders */
-
+			fmt.Println("Received Packet", msg.ID)
 			if msg.ID != Global.ID {
 				/* comments from testing w. two elevators
-				elevator w. id=0 does never reach inside the if-block
-				elevator w. id=1 does reach inside, but bool values in print never change
+				elevator w. -id=0 does never reach inside the if-block
+				elevator w. -id=1 does reach inside, but bool values in print never change
 				*/
 
 				//print both registered local and global orders
 				fmt.Println("Got a network order")
-				fmt.Println("Me, id:", id)
+				fmt.Println("LocalOrders, id:", id)
 				for i, _ := range Global.Orders {
-					fmt.Println("F", i, "Local:", Global.Orders[i][id],
-						"Network:", msg.Orders[i][id])
+					fmt.Println("F", i, "Elev:", msg.ID, Global.Orders[i][msg.ID], "Elev:", id, Global.Orders[i][id])
 				}
-				fmt.Println("Hi from id:", msg.ID)
+				fmt.Println("Hello from the network from id:", msg.ID, " - I have these registered orders")
 				for i, _ := range Global.Orders {
-					fmt.Println("F", i, "Local:", Global.Orders[i][msg.ID],
-						"Network:", msg.Orders[i][msg.ID])
+					fmt.Println("F", i,
+						"Elev:", msg.ID, msg.Orders[i][msg.ID], "Elev:", id, msg.Orders[i][id])
 				}
 				fmt.Println()
 
@@ -175,16 +174,16 @@ func OrderServer(id int, buttonPress <-chan ButtonEvent, newPackets <-chan Globa
 								Global.Orders[msgFloor][msgElevID].Down || msgFloorState.Down
 							Global.Orders[msgFloor][msgElevID].Cab =
 								Global.Orders[msgFloor][msgElevID].Cab || msgFloorState.Cab
-						} else {
-							//Should probably be done in the next case?
-							/*	Remove all up/down orders if there is a clear present */
-							for elevID := 0; elevID < config.NElevs; elevID++ {
-								Global.Orders[msgFloor][elevID].Up = false
-								Global.Orders[msgFloor][elevID].Down = false
-							}
-							/*	Also remove cab order if present */
-							Global.Orders[msgFloor][msgElevID].Cab = false
-						}
+						} //else {
+						//Should probably be done in the next case?
+						/*	Remove all up/down orders if there is a clear present */
+						//for elevID := 0; elevID < config.NElevs; elevID++ {
+						//Global.Orders[msgFloor][elevID].Up = false
+						//Global.Orders[msgFloor][elevID].Down = false
+						//}
+						/*	Also remove cab order if present */
+						//Global.Orders[msgFloor][msgElevID].Cab = false
+						//}
 					}
 				}
 				lightRefresh <- -1

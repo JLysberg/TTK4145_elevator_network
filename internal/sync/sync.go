@@ -26,13 +26,13 @@ type NetworkChannels struct {
 
 func SyncMessages(ch NetworkChannels, id int) {
 	var (
-		sendMsg GlobalInfo
-		//nodes 		[config.NElevs]
-		//orders		[config.MFloors][config.NElevs]
+	//sendMsg GlobalInfo
+	//nodes 		[config.NElevs]
+	//orders		[config.MFloors][config.NElevs]
 	)
 
-	//bcastTicker := time.NewTicker(500 * time.Millisecond)
-	bcastTicker := time.NewTicker(2 * time.Second)
+	bcastTicker := time.NewTicker(500 * time.Millisecond)
+	//bcastTicker := time.NewTicker(2 * time.Second)
 
 	for {
 		select {
@@ -46,7 +46,8 @@ func SyncMessages(ch NetworkChannels, id int) {
 				sendMsg.Nodes = monitor.Global().Nodes  - nodes
 				sendMsg.Orders = monitor.Global().Orders -orders
 			*/
-			sendMsg = monitor.Global()
+			sendMsg := monitor.Global()
+			fmt.Println("Sending:", sendMsg.ID)
 			ch.MsgTransmitter <- sendMsg
 
 		case p := <-ch.PeerUpdate:

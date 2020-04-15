@@ -1,6 +1,8 @@
 package node
 
 import (
+	// "fmt"
+
 	/* Setup desc. in main */
 	"github.com/JLysberg/TTK4145_elevator_network/internal/common/config"
 	. "github.com/JLysberg/TTK4145_elevator_network/internal/common/types"
@@ -8,11 +10,14 @@ import (
 	"github.com/JLysberg/TTK4145_elevator_network/pkg/elevio"
 )
 
-func orderInFront() bool {
-	for floor, floorState := range monitor.Local.Queue {
+var getLocalCopy = make(chan LocalInfo)
+var setLocalDir = make(chan MotorDirection)
+
+func orderInFront(local LocalInfo, queue []FloorState) bool {
+	for floor, floorState := range queue {
 		if floorState.Cab || floorState.Up || floorState.Down {
-			diff := monitor.Local.Floor - floor
-			switch monitor.Local.LastDir {
+			diff := local.Floor - floor
+			switch local.LastDir {
 			case MD_Up:
 				if diff < 0 {
 					return true
@@ -27,8 +32,8 @@ func orderInFront() bool {
 	return false
 }
 
-func orderAvailable() bool {
-	for _, floorState := range monitor.Local.Queue {
+func orderAvailable(queue []FloorState) bool {
+	for _, floorState := range queue {
 		if floorState.Cab || floorState.Up || floorState.Down {
 			return true
 		}
@@ -36,50 +41,53 @@ func orderAvailable() bool {
 	return false
 }
 
-func calculateDirection() MotorDirection {
-	if orderAvailable() {
-		if orderInFront() {
-			return monitor.Local.LastDir
+func calculateDirection(local LocalInfo, queue []FloorState) MotorDirection {
+	if orderAvailable(queue) {
+		if orderInFront(local, queue) {
+			return local.LastDir
 		}
-		return -1 * monitor.Local.LastDir
+		return -1 * local.LastDir
 	}
 	return MD_Stop
 }
 
 var setDirectionInstance = false
 
-func setDirection(doorOpen <-chan bool) {
+func setDirection(doorOpen <-chan bool, queue []FloorState) {
 	/* Ensure only one instance of this thread is running at once */
 	if setDirectionInstance {
 		return
 	}
 	setDirectionInstance = true
+	/*	Get copy of local from ElevatorServer */
+	local := Local()
 	/*	Safety loop to ensure direction is never changed while door is open */
-	if monitor.Local.State == ES_Stop {
+	if local.State == ES_Stop {
 	safety:
 		for {
 			select {
 			case <-doorOpen:
+				/*	Update local and queue in case of change */
+				local = Local()
+				queue = monitor.Queue()
 				break safety
 			}
 		}
 	}
 	/*	Calculate, set and save direction to local memory */
-	dir := calculateDirection()
+	dir := calculateDirection(local, queue)
 	elevio.SetMotorDirection(dir)
-	monitor.Local.Dir = dir
-	if dir != MD_Stop {
-		monitor.Local.LastDir = monitor.Local.Dir
-		monitor.Local.State = ES_Run
-	}
+	
+	setLocalDir <- dir
 	setDirectionInstance = false
 }
 
-func stopCriteria(floor int) bool {
-	floorState := monitor.Local.Queue[floor]
-	return floorState.Up && monitor.Local.Dir == MD_Up ||
-		floorState.Down && monitor.Local.Dir == MD_Down ||
-		(floorState.Down || floorState.Up) && !orderInFront() ||
+func stopCriteria(floor int, local LocalInfo, queue []FloorState) bool {
+	floorState := queue[floor]
+	return floorState.Up && local.Dir == MD_Up ||
+		floorState.Down && local.Dir == MD_Down ||
+		(floorState.Down || floorState.Up) &&
+		!orderInFront(local, queue) ||
 		floorState.Cab
 }
 
@@ -87,8 +95,6 @@ func floorStop(floor int, clearOrder chan<- int) {
 	/* Stop */
 	clearOrder <- floor
 	elevio.SetMotorDirection(MD_Stop)
-	monitor.Local.State = ES_Stop
-	monitor.Local.Dir = MD_Stop
 	/* Open door */
 	doorTimeout.Reset(config.DoorTimeout)
 	elevio.SetDoorOpenLamp(true)

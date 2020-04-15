@@ -48,11 +48,11 @@ type NodeChannels struct {
 	ButtonPress       chan ButtonEvent
 	FloorSensor       chan int
 	ObstructionSwitch chan bool
-	UpdateQueue          chan int
+	UpdateQueue          chan []FloorState
 	PacketReceiver    chan []byte
 	LightRefresh      chan int
 	ClearOrder        chan int
-	DoorTimeout		  chan bool
+	DoorOpen		  chan bool
 }
 
 type LocalInfo struct {
@@ -60,9 +60,9 @@ type LocalInfo struct {
 	Dir          MotorDirection
 	LastDir      MotorDirection
 	Floor        int
-	Queue        [config.MFloors]FloorState
-	OnlineList   [config.NElevs]bool
-	ElevLastSent [config.NElevs]int
+	// Queue        [config.MFloors]FloorState
+	// OnlineList   [config.NElevs]bool
+	// ElevLastSent [config.NElevs]int
 }
 
 type GlobalInfo struct {

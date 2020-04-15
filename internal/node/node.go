@@ -2,11 +2,12 @@ package node
 
 import (
 	"time"
+	// "fmt"
 
 	/* Setup desc. in main*/
 	"github.com/JLysberg/TTK4145_elevator_network/internal/common/config"
 	. "github.com/JLysberg/TTK4145_elevator_network/internal/common/types"
-	"github.com/JLysberg/TTK4145_elevator_network/internal/monitor"
+	// "github.com/JLysberg/TTK4145_elevator_network/internal/monitor"
 	"github.com/JLysberg/TTK4145_elevator_network/pkg/elevio"
 )
 
@@ -18,20 +19,9 @@ import (
 // 	}
 // }
 
-func Initialize(floorSensor <-chan int, lightRefresh chan<- int) {
-	/*	Enter defined state */
-	elevio.SetMotorDirection(MD_Down)
-	floor := <-floorSensor
-	elevio.SetMotorDirection(MD_Stop)
-	/*	Initialize local memory */
-	monitor.Local.Dir = MD_Stop
-	monitor.Local.LastDir = MD_Down
-	monitor.Local.State = ES_Idle
-	monitor.Local.Floor = floor
-	/*	Refresh all button lights */
-	lightRefresh <- -1
-
-	elevio.SetFloorIndicator(floor)
+/*	Local gives a call to ElevatorServer to return a copy of local */
+func Local() LocalInfo {
+	return <-getLocalCopy
 }
 
 var doorTimeout = time.NewTimer(1 * time.Hour)
@@ -39,45 +29,75 @@ var doorTimeout = time.NewTimer(1 * time.Hour)
 /*	ElevatorServer handles all elevator logic and communications between local
 	routines in current node. */
 func ElevatorServer(ch NodeChannels) {
+	/*	Declare local variables */
+	local := LocalInfo{
+		State:   ES_Idle,
+		Dir:     MD_Stop,
+		LastDir: MD_Down,
+	}
+	var queueCopy []FloorState
+	/*	Initialize */
+	elevio.SetMotorDirection(MD_Down)
+	floor := <-ch.FloorSensor
+	elevio.SetMotorDirection(MD_Stop)
+	local.Floor = floor
+	ch.LightRefresh <- -1
+	elevio.SetFloorIndicator(floor)
+
 	for {
 		select {
-		case orderFloor := <-ch.UpdateQueue:
-			switch monitor.Local.State {
+		case queueCopy = <-ch.UpdateQueue:
+			switch local.State {
 			case ES_Stop, ES_Idle:
-				if orderFloor == monitor.Local.Floor {
-					floorStop(orderFloor, ch.ClearOrder)
+				if queueCopy[local.Floor].Up ||
+				   queueCopy[local.Floor].Down ||
+				   queueCopy[local.Floor].Cab {
+					floorStop(local.Floor, ch.ClearOrder)
+					local.State = ES_Stop
+					local.Dir = MD_Stop
 				} else {
-					go setDirection(ch.DoorTimeout)
+					go setDirection(ch.DoorOpen, queueCopy)
 				}
 			case ES_Run:
-				go setDirection(ch.DoorTimeout)
+				go setDirection(ch.DoorOpen, queueCopy)
 			}
 
 		case arrivedFloor := <-ch.FloorSensor:
 			go elevio.SetFloorIndicator(arrivedFloor)
-			monitor.Local.Floor = arrivedFloor
-			if stopCriteria(arrivedFloor) {
+			local.Floor = arrivedFloor
+			if stopCriteria(arrivedFloor, local, queueCopy) {
 				floorStop(arrivedFloor, ch.ClearOrder)
-				go setDirection(ch.DoorTimeout)
+				local.State = ES_Stop
+				local.Dir = MD_Stop
+				go setDirection(ch.DoorOpen, queueCopy)
 			}
 
 		case <-doorTimeout.C:
 			elevio.SetDoorOpenLamp(false)
-			ch.DoorTimeout <- true
-			if !orderAvailable() {
-				monitor.Local.State = ES_Idle
+			ch.DoorOpen <- true
+			if !orderAvailable(queueCopy) {
+				local.State = ES_Idle
 			} else {
-				monitor.Local.State = ES_Run
+				local.State = ES_Run
 			}
 
 		case switchEnabled := <-ch.ObstructionSwitch:
-			if monitor.Local.State == ES_Stop {
+			if local.State == ES_Stop {
 				if switchEnabled {
 					doorTimeout.Reset(1 * time.Hour)
 				} else {
 					doorTimeout.Reset(config.DoorTimeout)
 				}
 			}
+
+		case dir := <-setLocalDir:
+			local.Dir = dir
+			if dir != MD_Stop {
+				local.LastDir = dir
+				local.State = ES_Run
+			}
+
+		case getLocalCopy <- local:
 		}
 	}
 }

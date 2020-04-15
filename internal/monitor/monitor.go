@@ -12,6 +12,16 @@ import (
 	"github.com/JLysberg/TTK4145_elevator_network/pkg/elevio"
 )
 
+var getQueueCopy = make(chan []FloorState)
+
+func createQueueCopy(queue []FloorState) []FloorState {
+	copy := make([]FloorState, len(queue))
+	for i, k := range queue {
+		copy[i] = k
+	}
+	return copy
+}
+
 func clearTimeout(floor int) {
 	Global.Orders[floor][Global.ID].Clear = true
 	timeout := time.NewTimer(config.ClearTimeout)
@@ -19,13 +29,17 @@ func clearTimeout(floor int) {
 	Global.Orders[floor][Global.ID].Clear = false
 }
 
-var Local LocalInfo
+/*	Queue gives a call to CostEstimator to return a copy of queue */
+func Queue() []FloorState {
+	return <-getQueueCopy
+}
+
 var Global GlobalInfo
 
 /*	CostEstimator is a goroutine which continuously assigns orders from 
 	the global order matrix to any node, taking multiple factors into account.
 	All active orders are always assigned to the elevator with the least cost.
-	The responsibility of CostEstimator is to guarantee that Local.Queue 
+	The responsibility of CostEstimator is to guarantee that queue 
 	is always up to date.
 	
 	Cost = distance cost + state cost:
@@ -41,24 +55,28 @@ var Global GlobalInfo
 		Stopped			+1
 		Has passed		+5
 		NOTE: (Has passed includes case of passing order in opposite direction) */
-func CostEstimator(updateQueue chan<- int) {
+func CostEstimator(updateQueue chan<- []FloorState) {
+	queue := make([]FloorState, config.MFloors)
 	for {
 		estBegin := time.Now()
 		/*	Always assign cab orders to local node */
 		for floor, floorStates := range Global.Orders {
-			if floorStates[Global.ID].Cab && !floorStates[Global.ID].Clear{
-				Local.Queue[floor].Cab = true
-				updateQueue <- floor
+			if floorStates[Global.ID].Cab && !floorStates[Global.ID].Clear &&
+				!queue[floor].Cab {
+				queue[floor].Cab = true
+				updateQueue <- createQueueCopy(queue)
 			}
 		}
 		/*	Cost calculation for non-cab orders */
 		for floor, floorStates := range Global.Orders {
 			for elevID, floorState := range floorStates {
 				if floorState.Clear {
-					if elevID == Global.ID {
-						Local.Queue[floor].Up = false
-						Local.Queue[floor].Down = false
-						Local.Queue[floor].Cab = false
+					if elevID == Global.ID &&
+					   (queue[floor].Up || queue[floor].Down || queue[floor].Cab){
+						queue[floor].Up = false
+						queue[floor].Down = false
+						queue[floor].Cab = false
+						updateQueue <- createQueueCopy(queue)
 					}
 				} else if floorState.Up || floorState.Down {
 					bestCost := int(math.Inf(1))
@@ -66,9 +84,9 @@ func CostEstimator(updateQueue chan<- int) {
 					cost := 0
 					for nodeID, node := range Global.Nodes {
 						/*	Ignore all offline nodes */
-						if !Local.OnlineList[nodeID] {
-							continue
-						}
+						// if !Local.OnlineList[nodeID] {
+						// 	continue
+						// }
 
 						/*	Calculate distance cost */
 						floorDiff := int(math.Abs(float64(node.Floor - floor)))
@@ -100,12 +118,18 @@ func CostEstimator(updateQueue chan<- int) {
 						}
 					}
 					/*	Assign order to local node if optimal */
-					if bestID == Global.ID && Local.Queue[floor] != floorState {
-						Local.Queue[floor] = floorState
-						updateQueue <- floor
+					if bestID == Global.ID && queue[floor] != floorState {
+						queue[floor] = floorState
+						queueCopy := createQueueCopy(queue)
+						updateQueue <- queueCopy
 					}
 				}
 			}
+		}
+		copy := createQueueCopy(queue)
+		select {
+		case getQueueCopy <- copy:
+		default:
 		}
 		/*	Calculate runtime and sleep if runtime is less than update rate */
 		estRuntime := time.Since(estBegin)

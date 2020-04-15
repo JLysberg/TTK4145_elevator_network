@@ -32,16 +32,15 @@ func main() {
 
 	ch := NodeChannels{
 		ButtonPress:       make(chan ButtonEvent),
-		UpdateQueue:          make(chan int),
+		UpdateQueue:          make(chan []FloorState),
 		FloorSensor:       make(chan int),
 		ObstructionSwitch: make(chan bool),
 		PacketReceiver:    make(chan []byte),
 		LightRefresh:      make(chan int),
 		ClearOrder:        make(chan int),
-		DoorTimeout:       make(chan bool),
+		DoorOpen:       make(chan bool),
 	}
 
-	go node.Initialize(ch.FloorSensor, ch.LightRefresh)
 	// go node.Printer()
 
 	go monitor.CostEstimator(ch.UpdateQueue)
@@ -55,9 +54,3 @@ func main() {
 
 	node.ElevatorServer(ch)
 }
-
-/*
-TODO:
-	- network
-	- watchdog: lookup table integration with network
-*/

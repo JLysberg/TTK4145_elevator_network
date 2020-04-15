@@ -27,8 +27,6 @@ func main() {
 	// flag.IntVar(&ID, "id", 0, "id of this elevator")
 	flag.Parse()
 	ID, _ := strconv.Atoi(id)
-	ID = 0
-	monitor.Global.ID = ID
 
 	ch := NodeChannels{
 		ButtonPress:       make(chan ButtonEvent),
@@ -44,7 +42,7 @@ func main() {
 	// go node.Printer()
 
 	go monitor.CostEstimator(ch.UpdateQueue)
-	go monitor.OrderServer(ch.ButtonPress, ch.PacketReceiver,
+	go monitor.OrderServer(ID, ch.ButtonPress, ch.PacketReceiver,
 		ch.LightRefresh, ch.ClearOrder)
 	go monitor.LightServer(ch.LightRefresh)
 

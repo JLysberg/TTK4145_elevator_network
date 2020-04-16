@@ -1,12 +1,10 @@
 package types
 
-import (
-	/* LAB setup */
-	// "../config"
+/* LAB setup */
+// "../config"
 
-	/* Setup desc. in main */
-	"github.com/JLysberg/TTK4145_elevator_network/internal/common/config"
-)
+/* Setup desc. in main */
+//"github.com/JLysberg/TTK4145_elevator_network/internal/common/config"
 
 type MotorDirection int
 
@@ -48,17 +46,17 @@ type NodeChannels struct {
 	ButtonPress       chan ButtonEvent
 	FloorSensor       chan int
 	ObstructionSwitch chan bool
-	UpdateQueue          chan []FloorState
+	UpdateQueue       chan []FloorState
 	LightRefresh      chan int
 	ClearOrder        chan int
-	DoorOpen		  chan bool
+	DoorOpen          chan bool
 }
 
 type LocalInfo struct {
-	State        ElevatorState
-	Dir          MotorDirection
-	LastDir      MotorDirection
-	Floor        int
+	State   ElevatorState
+	Dir     MotorDirection
+	LastDir MotorDirection
+	Floor   int
 	// Queue        [config.MFloors]FloorState
 	// OnlineList   [config.NElevs]bool
 	// ElevLastSent [config.NElevs]int

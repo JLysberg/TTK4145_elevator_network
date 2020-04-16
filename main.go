@@ -58,41 +58,43 @@ func main() {
 	//go run main.go --port=15658 -id=1
 	//Simulator: qwe(UP) - sdf (DOWN) - zxc (CAB)
 
-	sch := sync.NetworkChannels{
+	syncCh := sync.NetworkChannels{
 		MsgTransmitter: make(chan GlobalInfo),
 		MsgReceiver:    make(chan GlobalInfo),
 		PeerUpdate:     make(chan peers.PeerUpdate),
 		PeerTxEnable:   make(chan bool),
+		//UpdateClear:    make(chan int),
+		UpdateOrders: make(chan GlobalInfo),
 	}
 
 	ch := NodeChannels{
 		ButtonPress:       make(chan ButtonEvent),
-		UpdateQueue:          make(chan []FloorState),
+		UpdateQueue:       make(chan []FloorState),
 		FloorSensor:       make(chan int),
 		ObstructionSwitch: make(chan bool),
 		LightRefresh:      make(chan int),
 		ClearOrder:        make(chan int),
-		DoorOpen:       make(chan bool),
+		DoorOpen:          make(chan bool),
 	}
 
-	go node.Initialize(ch.FloorSensor, ch.LightRefresh)
+	//go node.Initialize(ch.FloorSensor, ch.LightRefresh)
 	// go node.Printer()
 
 	go monitor.CostEstimator(ch.UpdateQueue)
-	go monitor.OrderServer(ID, ch.ButtonPress, sch.MsgReceiver,
+	go monitor.OrderServer(ID, ch.ButtonPress, syncCh.UpdateOrders,
 		ch.LightRefresh, ch.ClearOrder)
 	//go sync.SyncMessages(sch.MsgTransmitter, sch.MsgReceiver, sch.PeerUpdate, id)
-	go sync.SyncMessages(sch, ID)
+	go sync.SyncMessages(syncCh, ID)
 	go monitor.LightServer(ch.LightRefresh)
 
 	go elevio.PollButtons(ch.ButtonPress)
 	go elevio.PollFloorSensor(ch.FloorSensor)
 	go elevio.PollObstructionSwitch(ch.ObstructionSwitch)
 
-	go bcast.Transmitter(30025, sch.MsgTransmitter)
-	go bcast.Receiver(30025, sch.MsgReceiver)
-	go peers.Transmitter(30125, id, sch.PeerTxEnable)
-	go peers.Receiver(30125, sch.PeerUpdate)
+	go bcast.Transmitter(30025, syncCh.MsgTransmitter)
+	go bcast.Receiver(30025, syncCh.MsgReceiver)
+	go peers.Transmitter(30125, id, syncCh.PeerTxEnable)
+	go peers.Receiver(30125, syncCh.PeerUpdate)
 
 	go node.ElevatorServer(ch)
 	select {}

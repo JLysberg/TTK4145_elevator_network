@@ -3,12 +3,13 @@ package node
 import (
 	"fmt"
 	"time"
+
 	// "fmt"
 
 	/* Setup desc. in main*/
 	"github.com/JLysberg/TTK4145_elevator_network/internal/common/config"
 	. "github.com/JLysberg/TTK4145_elevator_network/internal/common/types"
-	// "github.com/JLysberg/TTK4145_elevator_network/internal/monitor"
+	"github.com/JLysberg/TTK4145_elevator_network/internal/monitor"
 	"github.com/JLysberg/TTK4145_elevator_network/pkg/elevio"
 	/*
 		"../common/config"
@@ -25,7 +26,7 @@ func Printer() {
 				fmt.Println("*", floorState)
 			}
 		}
-		fmt.Println("#", monitor.Local.Queue)
+		fmt.Println("#", monitor.Queue())
 		fmt.Println()
 	}
 }
@@ -61,8 +62,8 @@ func ElevatorServer(ch NodeChannels) {
 			switch local.State {
 			case ES_Stop, ES_Idle:
 				if queueCopy[local.Floor].Up ||
-				   queueCopy[local.Floor].Down ||
-				   queueCopy[local.Floor].Cab {
+					queueCopy[local.Floor].Down ||
+					queueCopy[local.Floor].Cab {
 					floorStop(local.Floor, ch.ClearOrder)
 					local.State = ES_Stop
 					local.Dir = MD_Stop

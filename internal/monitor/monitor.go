@@ -66,10 +66,10 @@ func Global() GlobalInfo {
 	return <-getGlobalCopy
 }
 
-/*	CostEstimator is a goroutine which continuously assigns orders from 
+/*	CostEstimator is a goroutine which continuously assigns orders from
 	the global order matrix to any node, taking multiple factors into account.
 	All active orders are always assigned to the elevator with the least cost.
-	The responsibility of CostEstimator is to guarantee that queue 
+	The responsibility of CostEstimator is to guarantee that queue
 	is always up to date.
 
 	Cost = distance cost + state cost:
@@ -110,7 +110,7 @@ func CostEstimator(updateQueue chan<- []FloorState) {
 			for elevID, floorState := range floorStates {
 				if floorState.Clear {
 					if elevID == globalCopy.ID &&
-					   (queue[floor].Up || queue[floor].Down || queue[floor].Cab){
+						(queue[floor].Up || queue[floor].Down || queue[floor].Cab) {
 						queue[floor].Up = false
 						queue[floor].Down = false
 						queue[floor].Cab = false
@@ -172,19 +172,22 @@ func CostEstimator(updateQueue chan<- []FloorState) {
 	}
 }
 
-/*	OrderServer handles all incoming orders. This includes all new local orders 
-	as well as incoming network packets. The responsibility of OrderServer is 
+/*	OrderServer handles all incoming orders. This includes all new local orders
+	as well as incoming network packets. The responsibility of OrderServer is
 	to guarantee that global.Orders is always up to date with the rest of the network */
-func OrderServer(id int, buttonPress <-chan ButtonEvent, newPackets <-chan []byte,
-				  lightRefresh chan<- int, clearOrder <-chan int) {
-	global := GlobalInfo {
-		ID: 	id,
-		Nodes: 	make([]LocalInfo, config.NElevs),
+func OrderServer(id int, buttonPress <-chan ButtonEvent, newPackets <-chan GlobalInfo,
+	lightRefresh chan<- int, clearOrder <-chan int) {
+	global := GlobalInfo{
+		ID:     id,
+		Nodes:  make([]LocalInfo, config.NElevs),
 		Orders: make([][]FloorState, config.MFloors),
 	}
 	for i := range global.Orders {
 		global.Orders[i] = make([]FloorState, config.NElevs)
 	}
+
+	//timeout := make(chan bool)
+	//go func() { time.Sleep(1 * time.Second); timeout <- true }()
 
 	for {
 		/*	Create copy of global and pass on if there is a receiver available */
@@ -201,15 +204,28 @@ func OrderServer(id int, buttonPress <-chan ButtonEvent, newPackets <-chan []byt
 				global.Orders[pressedButton.Floor][global.ID].Cab = true
 			}
 			lightRefresh <- pressedButton.Floor
-		case receivedPackage := <-newPackets:
+		case msg := <-newPackets:
 			/*	Only update local global.Orders if it differs from msg.Orders */
-			if !equalOrderMatrix(msg.Orders, global.Orders) {
+			if !equalOrderMatrix(msg.Orders, global.Orders) && msg.ID != global.ID {
+
+				fmt.Println("Got a network order")
+				fmt.Println("LocalOrders, id:", id)
+				for i, _ := range global.Orders {
+					fmt.Println("F", i, "Elev:", msg.ID, global.Orders[i][msg.ID], "Elev:", global.ID, global.Orders[i][global.ID])
+				}
+				fmt.Println("Hi from id:", msg.ID, " - Order matrix from network")
+				for i, _ := range global.Orders {
+					fmt.Println("F", i,
+						"Elev:", msg.ID, msg.Orders[i][msg.ID], "Elev:", global.ID, msg.Orders[i][global.ID])
+				}
+				fmt.Println()
+
 				for msgFloor, msgFloorStates := range msg.Orders {
 					for msgElevID, msgFloorState := range msgFloorStates {
 						if !msgFloorState.Clear {
 							/*	Concatenate orders from msg into local order matrix */
 							global.Orders[msgFloor][msgElevID].Up =
-								global.Orders[msgFloor][msgElevID].Up || msgFloorState.Up 		
+								global.Orders[msgFloor][msgElevID].Up || msgFloorState.Up
 							global.Orders[msgFloor][msgElevID].Down =
 								global.Orders[msgFloor][msgElevID].Down || msgFloorState.Down
 							global.Orders[msgFloor][msgElevID].Cab =
@@ -227,9 +243,13 @@ func OrderServer(id int, buttonPress <-chan ButtonEvent, newPackets <-chan []byt
 				}
 				lightRefresh <- -1
 			}
+
+		//case <-timeout.C:
+		//global.Orders[clearFloor][global.ID].Clear = false
 		case clearFloor := <-clearOrder:
-			/*	Set clear value in global which is removed after 1 second 
+			/*	Set clear value in global which is removed after 1 second
 				OBS: Techically, this solution may result in read/write conflicts with global*/
+
 			go func() {
 				global.Orders[clearFloor][global.ID].Clear = true
 				timeout := time.NewTimer(config.ClearTimeout)
@@ -251,6 +271,7 @@ func OrderServer(id int, buttonPress <-chan ButtonEvent, newPackets <-chan []byt
 	}
 }
 
+/*
 func createGlobalCopy(global GlobalInfo) GlobalInfo {
 	cpy := global
 	cpy.Orders = global.Orders
@@ -262,7 +283,7 @@ func createGlobalCopy(global GlobalInfo) GlobalInfo {
 	}
 	return cpy
 }
-
+*/
 /*	LightServer updates every button light in accordance with the global order
 	matrix on refresh call. A refresh call of -1 updates all buttons, and
 	any specific floor call restricts the iteration to said floor. */

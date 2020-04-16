@@ -22,6 +22,9 @@ type NetworkChannels struct {
 	MsgReceiver    chan GlobalInfo
 	PeerUpdate     chan peers.PeerUpdate
 	PeerTxEnable   chan bool
+	//
+	//UpdateClear  chan int
+	UpdateOrders chan GlobalInfo
 }
 
 func SyncMessages(ch NetworkChannels, id int) {
@@ -36,7 +39,10 @@ func SyncMessages(ch NetworkChannels, id int) {
 
 	for {
 		select {
-		//case msg := <- ch.MsgReceiver:
+
+		case getMsg := <-ch.MsgReceiver:
+			ch.UpdateOrders <- getMsg
+
 		//update ElevLastSent?
 		//update onlineList?
 

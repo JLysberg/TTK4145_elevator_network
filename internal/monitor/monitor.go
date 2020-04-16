@@ -16,6 +16,24 @@ import (
 
 var getQueueCopy = make(chan []FloorState)
 var getGlobalCopy = make(chan GlobalInfo)
+var setGlobalClearBit = make(chan setGlobalClearBitParams)
+
+type setGlobalClearBitParams struct {
+	Floor int
+	Value bool
+}
+
+func clearTimeout(floor int) {
+	params := setGlobalClearBitParams {
+		Floor: floor,
+		Value: true,
+	}
+	setGlobalClearBit <- params
+	timeout := time.NewTimer(config.ClearTimeout)
+	<-timeout.C
+	params.Value = false
+	setGlobalClearBit <- params
+}
 
 func createQueueCopy(queue []FloorState) []FloorState {
 	copy := make([]FloorState, len(queue))
@@ -244,18 +262,13 @@ func OrderServer(id int, buttonPress <-chan ButtonEvent, newPackets <-chan Globa
 				lightRefresh <- -1
 			}
 
-		//case <-timeout.C:
-		//global.Orders[clearFloor][global.ID].Clear = false
+		case params := <-setGlobalClearBit:
+			global.Orders[params.Floor][global.ID].Clear = params.Value
+
 		case clearFloor := <-clearOrder:
 			/*	Set clear value in global which is removed after 1 second
 				OBS: Techically, this solution may result in read/write conflicts with global*/
-
-			go func() {
-				global.Orders[clearFloor][global.ID].Clear = true
-				timeout := time.NewTimer(config.ClearTimeout)
-				<-timeout.C
-				global.Orders[clearFloor][global.ID].Clear = false
-			}()
+			go clearTimeout(clearFloor)
 			lightRefresh <- clearFloor
 			/*	The following block might be superfluous when networks are introduced*/
 			/********************************************/

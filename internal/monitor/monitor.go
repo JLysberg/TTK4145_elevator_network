@@ -200,15 +200,23 @@ func OrderServer(id int, buttonPress <-chan ButtonEvent, newPackets <-chan Globa
 		select {
 		case getGlobalCopy <- createGlobalCopy(global):
 		case pressedButton := <-buttonPress:
-			for elevID := range global.Nodes {
-				switch pressedButton.Button {
-				case BT_HallUp:
-					global.Orders[pressedButton.Floor][elevID].Up = true
-				case BT_HallDown:
-					global.Orders[pressedButton.Floor][elevID].Down = true
-				case BT_Cab:
-					global.Orders[pressedButton.Floor][global.ID].Cab = true
-				}
+			// for elevID := range global.Nodes {
+			// 	switch pressedButton.Button {
+			// 	case BT_HallUp:
+			// 		global.Orders[pressedButton.Floor][elevID].Up = true
+			// 	case BT_HallDown:
+			// 		global.Orders[pressedButton.Floor][elevID].Down = true
+			// 	case BT_Cab:
+			// 		global.Orders[pressedButton.Floor][global.ID].Cab = true
+			// 	}
+			// }
+			switch pressedButton.Button {
+			case BT_HallUp:
+				global.Orders[pressedButton.Floor][global.ID].Up = true
+			case BT_HallDown:
+				global.Orders[pressedButton.Floor][global.ID].Down = true
+			case BT_Cab:
+				global.Orders[pressedButton.Floor][global.ID].Cab = true
 			}
 			lightRefresh <- createGlobalCopy(global)
 

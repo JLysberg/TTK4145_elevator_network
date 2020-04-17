@@ -2,17 +2,17 @@ package node
 
 import (
 	// "fmt"
+	"sync"
 
-	/* Setup desc. in main */
-	"github.com/JLysberg/TTK4145_elevator_network/internal/common/config"
-	. "github.com/JLysberg/TTK4145_elevator_network/internal/common/types"
-	"github.com/JLysberg/TTK4145_elevator_network/internal/monitor"
-	"github.com/JLysberg/TTK4145_elevator_network/pkg/elevio"
-	/*
-		"../common/config"
-		. "../common/types"
-		"../monitor"
-		"../../pkg/elevio"*/)
+	// "github.com/JLysberg/TTK4145_elevator_network/internal/common/config"
+	// . "github.com/JLysberg/TTK4145_elevator_network/internal/common/types"
+	// "github.com/JLysberg/TTK4145_elevator_network/internal/monitor"
+	// "github.com/JLysberg/TTK4145_elevator_network/pkg/elevio"
+	
+	"../common/config"
+	. "../common/types"
+	"../monitor"
+	"../../pkg/elevio")
 
 var getLocalCopy = make(chan LocalInfo)
 var setLocalDir = make(chan MotorDirection)
@@ -55,35 +55,45 @@ func calculateDirection(local LocalInfo, queue []FloorState) MotorDirection {
 	return MD_Stop
 }
 
-var setDirectionInstance = false
+var (
+	setDirectionInstance bool
+	setDirectionInstanceMx sync.Mutex
+)
 
 func setDirection(doorOpen <-chan bool, queue []FloorState) {
 	/* Ensure only one instance of this thread is running at once */
-	if setDirectionInstance { //read
-		return
-	}
-	setDirectionInstance = true //write
-	/*	Get copy of local from ElevatorServer */
-	local := Local()
-	/*	Safety loop to ensure direction is never changed while door is open */
-	if local.State == ES_Stop {
-	safety:
-		for {
-			select {
-			case <-doorOpen:
-				/*	Update local and queue in case of change */
-				local = Local()
-				queue = monitor.Queue()
-				break safety
+	setDirectionInstanceMx.Lock()
+	start := !setDirectionInstance
+	setDirectionInstance = true
+	setDirectionInstanceMx.Unlock()
+	if start {
+		go func() {
+			/*	Get copy of local from ElevatorServer */
+			local := Local()
+			/*	Safety loop to ensure direction is never changed while door is open */
+			if local.State == ES_Stop {
+			safety:
+				for {
+					select {
+					case <-doorOpen:
+						/*	Update local and queue in case of change */
+						local = Local()
+						queue = monitor.Queue()
+						break safety
+					}
+				}
 			}
-		}
-	}
-	/*	Calculate, set and save direction to local memory */
-	dir := calculateDirection(local, queue)
-	elevio.SetMotorDirection(dir)
+			/*	Calculate, set and save direction to local memory */
+			dir := calculateDirection(local, queue)
+			elevio.SetMotorDirection(dir)
 
-	setLocalDir <- dir
-	setDirectionInstance = false
+			setLocalDir <- dir
+
+			setDirectionInstanceMx.Lock()
+			setDirectionInstance = false
+			setDirectionInstanceMx.Unlock()
+		}()
+	}
 }
 
 func stopCriteria(floor int, local LocalInfo, queue []FloorState) bool {

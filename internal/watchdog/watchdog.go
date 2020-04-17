@@ -5,10 +5,9 @@ import (
 	"time"
 	"encoding/json"
 
-	/* Setup desc. in main */
-/*	. "github.com/JLysberg/TTK4145_elevator_network/internal/common/types"
-	"github.com/JLysberg/TTK4145_elevator_network/internal/common/config"
-*/
+	// . "github.com/JLysberg/TTK4145_elevator_network/internal/common/types"
+	// "github.com/JLysberg/TTK4145_elevator_network/internal/common/config"
+
 	"../monitor"
 	. "../common/types"
 	"../common/config"

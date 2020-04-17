@@ -6,16 +6,16 @@ import (
 	"strconv"
 	"time"
 
-	. "github.com/JLysberg/TTK4145_elevator_network/internal/common/types"
-	"github.com/JLysberg/TTK4145_elevator_network/internal/monitor"
-	"github.com/JLysberg/TTK4145_elevator_network/pkg/network/localip"
-	"github.com/JLysberg/TTK4145_elevator_network/pkg/network/peers"
-	/*
-		"../../pkg/network/localip"
-		"../../pkg/network/peers"
-		. "../common/types"
-		"../monitor"
-	*/)
+	// . "github.com/JLysberg/TTK4145_elevator_network/internal/common/types"
+	// "github.com/JLysberg/TTK4145_elevator_network/internal/monitor"
+	// "github.com/JLysberg/TTK4145_elevator_network/pkg/network/localip"
+	// "github.com/JLysberg/TTK4145_elevator_network/pkg/network/peers"
+	
+	"../../pkg/network/localip"
+	"../../pkg/network/peers"
+	. "../common/types"
+	"../monitor"
+	)
 
 type NetworkChannels struct {
 	MsgTransmitter chan GlobalInfo

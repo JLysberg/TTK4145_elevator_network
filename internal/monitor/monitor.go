@@ -5,14 +5,13 @@ import (
 	"math"
 	"time"
 
-	/* Setup desc. in main */
-	"github.com/JLysberg/TTK4145_elevator_network/internal/common/config"
-	. "github.com/JLysberg/TTK4145_elevator_network/internal/common/types"
-	"github.com/JLysberg/TTK4145_elevator_network/pkg/elevio"
-	/*
-		"../common/config"
-		. "../common/types"
-		"../../pkg/elevio"*/)
+	// "github.com/JLysberg/TTK4145_elevator_network/internal/common/config"
+	// . "github.com/JLysberg/TTK4145_elevator_network/internal/common/types"
+	// "github.com/JLysberg/TTK4145_elevator_network/pkg/elevio"
+	
+	"../common/config"
+	. "../common/types"
+	"../../pkg/elevio")
 
 var getQueueCopy = make(chan []FloorState)
 var getGlobalCopy = make(chan GlobalInfo)
@@ -207,9 +206,8 @@ func OrderServer(id int, buttonPress <-chan ButtonEvent, newPackets <-chan Globa
 
 	for {
 		/*	Create copy of global and pass on if there is a receiver available */
-		globalCopy := createGlobalCopy(global)
 		select {
-		case getGlobalCopy <- globalCopy:
+		case getGlobalCopy <- createGlobalCopy(global):
 		case pressedButton := <-buttonPress:
 			for elevID := range global.Nodes {
 				switch pressedButton.Button {
@@ -221,7 +219,7 @@ func OrderServer(id int, buttonPress <-chan ButtonEvent, newPackets <-chan Globa
 					global.Orders[pressedButton.Floor][global.ID].Cab = true
 				}
 			}
-			lightRefresh <- globalCopy
+			lightRefresh <- createGlobalCopy(global)
 
 		case msg := <-newPackets:
 
@@ -270,7 +268,7 @@ func OrderServer(id int, buttonPress <-chan ButtonEvent, newPackets <-chan Globa
 						}
 					}
 				}
-				lightRefresh <- globalCopy
+				lightRefresh <- createGlobalCopy(global)
 			}
 
 		case params := <-setGlobalClearBit:
@@ -293,7 +291,7 @@ func OrderServer(id int, buttonPress <-chan ButtonEvent, newPackets <-chan Globa
 			/*	Also remove cab order if present */
 			global.Orders[clearFloor][global.ID].Cab = false
 			/*********************************************/
-			lightRefresh <- globalCopy
+			lightRefresh <- createGlobalCopy(global)
 		}
 
 		for msgFloor, msgFloorStates := range global.Orders {
@@ -313,17 +311,13 @@ func OrderServer(id int, buttonPress <-chan ButtonEvent, newPackets <-chan Globa
 }
 
 /*	LightServer updates every button light in accordance with the global order
-	matrix on refresh call. A refresh call of -1 updates all buttons, and
-	any specific floor call restricts the iteration to said floor. */
+	matrix on refresh call. */
 func LightServer(lightRefresh <-chan GlobalInfo) {
 	for {
 		select {
+		/*	Request copy of global from monitor */
 		case globalCopy := <-lightRefresh:
-			/*	Request a copy of global from OrderServer */
-			//globalCopy := Global()
-			//fmt.Println(globalCopy.Orders)
 			for floor, floorStates := range globalCopy.Orders {
-				/*	Skip most of the iteration if callingFloor is specified */
 				for _, floorState := range floorStates {
 					for button := BT_HallUp; button <= BT_HallDown; button++ {
 						lightValue := false
@@ -334,7 +328,6 @@ func LightServer(lightRefresh <-chan GlobalInfo) {
 							lightValue = floorState.Down
 						}
 						elevio.SetButtonLamp(button, floor, lightValue)
-						//fmt.Println("Set the lights for " , button, " in floor ", floor , " to ", lightValue)
 					}
 					elevio.SetButtonLamp(BT_Cab, floor, globalCopy.Orders[floor][globalCopy.ID].Cab)
 				}

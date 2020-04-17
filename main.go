@@ -8,34 +8,25 @@ import (
 	//"fmt"
 	//"os"
 
-	/*
-		1. Set GOPATH environment variable, e.g. to %USERPROFILE%/go. Can NOT
-		   equal to %GOROOT%.
-		2. Pull repository with "go get github.com/JLysberg/TTK4145_elevator_network"
-		3. The following import paths should be compatible
-
-	*/
-	"github.com/JLysberg/TTK4145_elevator_network/internal/common/config"
-	. "github.com/JLysberg/TTK4145_elevator_network/internal/common/types"
-	"github.com/JLysberg/TTK4145_elevator_network/internal/monitor"
-	"github.com/JLysberg/TTK4145_elevator_network/internal/node"
-	"github.com/JLysberg/TTK4145_elevator_network/internal/sync"
-	"github.com/JLysberg/TTK4145_elevator_network/pkg/elevio"
-	"github.com/JLysberg/TTK4145_elevator_network/pkg/network/peers"
-
-	//"github.com/JLysberg/TTK4145_elevator_network/pkg/network/localip"
-	"github.com/JLysberg/TTK4145_elevator_network/pkg/network/bcast"
-	/*
-		"./internal/common/config"
-		. "./internal/common/types"
-		"./internal/node"
+	// "github.com/JLysberg/TTK4145_elevator_network/internal/common/config"
+	// . "github.com/JLysberg/TTK4145_elevator_network/internal/common/types"
+	// "github.com/JLysberg/TTK4145_elevator_network/internal/monitor"
+	// "github.com/JLysberg/TTK4145_elevator_network/internal/node"
+	// "github.com/JLysberg/TTK4145_elevator_network/internal/sync"
+	// "github.com/JLysberg/TTK4145_elevator_network/pkg/elevio"
+	// "github.com/JLysberg/TTK4145_elevator_network/pkg/network/peers"
+	// "github.com/JLysberg/TTK4145_elevator_network/pkg/network/bcast"
+	
+	"./internal/common/config"
+	. "./internal/common/types"
+	"./internal/node"
 
 
-		"./internal/monitor"
-		"./internal/sync"
-		"./pkg/elevio"
-		"./pkg/network/peers"
-		"./pkg/network/bcast"*/)
+	"./internal/monitor"
+	"./internal/sync"
+	"./pkg/elevio"
+	"./pkg/network/peers"
+	"./pkg/network/bcast")
 
 func main() {
 

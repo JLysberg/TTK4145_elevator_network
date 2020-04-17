@@ -63,15 +63,15 @@ func main() {
 		FloorSensor:       make(chan int),
 		ObstructionSwitch: make(chan bool),
 		LightRefresh:      make(chan GlobalInfo),
-		ClearOrder:        make(chan int),
+		SetClearBit:       make(chan int),
 		DoorOpen:          make(chan bool),
 	}
 
-	// go node.Printer()
+	go node.Printer()
 
 	go monitor.CostEstimator(ch.UpdateQueue)
 	go monitor.OrderServer(ID, ch.ButtonPress, syncCh.UpdateOrders,
-		ch.LightRefresh, ch.ClearOrder)
+		ch.LightRefresh, ch.SetClearBit)
 	go sync.SyncMessages(syncCh, ID)
 	go monitor.LightServer(ch.LightRefresh)
 

@@ -25,7 +25,7 @@ func Printer() {
 				fmt.Println("*", floorState)
 			}
 		}
-		fmt.Println("#", monitor.Queue())
+		// fmt.Println("#", monitor.Queue())
 		fmt.Println()
 	}
 }
@@ -62,7 +62,7 @@ func ElevatorServer(ch NodeChannels) {
 				if queueCopy[local.Floor].Up ||
 					queueCopy[local.Floor].Down ||
 					queueCopy[local.Floor].Cab {
-					floorStop(local.Floor, ch.ClearOrder)
+					floorStop(local.Floor, ch.SetClearBit)
 					local.State = ES_Stop
 					local.Dir = MD_Stop
 				} else {
@@ -78,7 +78,7 @@ func ElevatorServer(ch NodeChannels) {
 			go elevio.SetFloorIndicator(arrivedFloor)
 			local.Floor = arrivedFloor
 			if stopCriteria(arrivedFloor, local, queueCopy) {
-				floorStop(arrivedFloor, ch.ClearOrder)
+				floorStop(arrivedFloor, ch.SetClearBit)
 				local.State = ES_Stop
 				local.Dir = MD_Stop
 				go setDirection(ch.DoorOpen, queueCopy)

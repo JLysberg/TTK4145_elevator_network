@@ -105,9 +105,9 @@ func stopCriteria(floor int, local LocalInfo, queue []FloorState) bool {
 		floorState.Cab
 }
 
-func floorStop(floor int, clearOrder chan<- int) {
+func floorStop(floor int, setClearBit chan<- int) {
 	/* Stop */
-	clearOrder <- floor
+	setClearBit <- floor
 	elevio.SetMotorDirection(MD_Stop)
 	/* Open door */
 	doorTimeout.Reset(config.DoorTimeout)

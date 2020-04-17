@@ -15,23 +15,11 @@ import (
 
 var getQueueCopy = make(chan []FloorState)
 var getGlobalCopy = make(chan GlobalInfo)
-var setGlobalClearBit = make(chan setGlobalClearBitParams)
+var remOrders = make(chan remOrdersParams)
 
-type setGlobalClearBitParams struct {
+type remOrdersParams struct {
 	Floor int
-	Value bool
-}
-
-func clearTimeout(floor int) {
-	params := setGlobalClearBitParams{
-		Floor: floor,
-		Value: true,
-	}
-	//setGlobalClearBit <- params
-	timeout := time.NewTimer(config.ClearTimeout)
-	<-timeout.C
-	params.Value = false
-	setGlobalClearBit <- params
+	ID    int
 }
 
 func createQueueCopy(queue []FloorState) []FloorState {
@@ -194,7 +182,7 @@ func CostEstimator(updateQueue chan<- []FloorState) {
 	as well as incoming network packets. The responsibility of OrderServer is
 	to guarantee that global.Orders is always up to date with the rest of the network */
 func OrderServer(id int, buttonPress <-chan ButtonEvent, newPackets <-chan GlobalInfo,
-	lightRefresh chan<- GlobalInfo, clearOrder <-chan int) {
+	lightRefresh chan<- GlobalInfo, setClearBit <-chan int) {
 	global := GlobalInfo{
 		ID:     id,
 		Nodes:  make([]LocalInfo, config.NElevs),
@@ -203,6 +191,9 @@ func OrderServer(id int, buttonPress <-chan ButtonEvent, newPackets <-chan Globa
 	for i := range global.Orders {
 		global.Orders[i] = make([]FloorState, config.NElevs)
 	}
+	/*	Declare a ticker which governs the interval in which global is checked
+		for handled clear bits */
+	remClearTicker := time.NewTicker(1000 * time.Millisecond)
 
 	for {
 		/*	Create copy of global and pass on if there is a receiver available */
@@ -239,11 +230,7 @@ func OrderServer(id int, buttonPress <-chan ButtonEvent, newPackets <-chan Globa
 				fmt.Println()
 
 				for msgFloor, msgFloorStates := range msg.Orders {
-					hasOrders := false
 					for msgElevID, msgFloorState := range msgFloorStates {
-						if !hasOrders {
-							hasOrders = msg.Orders[msgFloor][msgElevID].Up || msg.Orders[msgFloor][msgElevID].Down || msg.Orders[msgFloor][msgElevID].Cab
-						}
 						if !msgFloorState.Clear {
 							/*	Concatenate orders from msg into local order matrix */
 							global.Orders[msgFloor][msgElevID].Up =
@@ -253,59 +240,57 @@ func OrderServer(id int, buttonPress <-chan ButtonEvent, newPackets <-chan Globa
 							global.Orders[msgFloor][msgElevID].Cab =
 								global.Orders[msgFloor][msgElevID].Cab || msgFloorState.Cab
 						} else {
-							/*	Remove all up/down orders if there is a clear present */
-							for elevID := 0; elevID < config.NElevs; elevID++ {
-								global.Orders[msgFloor][elevID].Up = false
-								global.Orders[msgFloor][elevID].Down = false
+							/*	Remove orders on msgFloor */
+							params := remOrdersParams {
+								Floor: msgFloor,
+								ID:    msgElevID,
 							}
-							/*	Also remove cab order if present */
-							global.Orders[msgFloor][msgElevID].Cab = false
-						}
-					}
-					if !hasOrders {
-						for msgElevID := range msgFloorStates {
-							global.Orders[msgFloor][msgElevID].Clear = false
+							go func() {
+								remOrders <- params
+							}()
 						}
 					}
 				}
 				lightRefresh <- createGlobalCopy(global)
 			}
 
-		case params := <-setGlobalClearBit:
-			for elevID := 0; elevID < config.NElevs; elevID++ {
-				global.Orders[params.Floor][elevID].Clear = params.Value
+		case clearBitFloor := <-setClearBit:
+			/*	Set clear bit in global */
+			global.Orders[clearBitFloor][global.ID].Clear = true
+			/*	Remove orders on clearBitFloor */
+			params := remOrdersParams {
+				Floor: clearBitFloor,
+				ID:    global.ID,
 			}
-
-		case clearFloor := <-clearOrder:
-			/*	Set clear value in global which is removed after 1 second */
-
-			/*	The following block might be superfluous when networks are introduced*/
-			/********************************************/
-			/*	Remove all up/down orders if there is a clear present */
+			go func() {
+				remOrders <- params
+			}()
+			
+		case params := <-remOrders:
+			/*	Remove all up/down orders on specified floor */
 			for elevID := 0; elevID < config.NElevs; elevID++ {
-				global.Orders[clearFloor][elevID].Clear = true
-				global.Orders[clearFloor][elevID].Up = false
-				global.Orders[clearFloor][elevID].Down = false
-
+				global.Orders[params.Floor][elevID].Up = false
+				global.Orders[params.Floor][elevID].Down = false
+				
 			}
-			/*	Also remove cab order if present */
-			global.Orders[clearFloor][global.ID].Cab = false
-			/*********************************************/
+			/*	Also remove cab order on specified floor, only for specified ID */
+			global.Orders[params.Floor][params.ID].Cab = false
+
 			lightRefresh <- createGlobalCopy(global)
-		}
-
-		for msgFloor, msgFloorStates := range global.Orders {
-			for msgElevID := range msgFloorStates {
-				/*	Concatenate orders from msg into local order matrix */
-				global.Orders[msgFloor][msgElevID].Up =
-					global.Orders[msgFloor][msgElevID].Up && !global.Orders[msgFloor][msgElevID].Clear
-				global.Orders[msgFloor][msgElevID].Down =
-					global.Orders[msgFloor][msgElevID].Down && !global.Orders[msgFloor][msgElevID].Clear
-				global.Orders[msgFloor][msgElevID].Cab =
-					global.Orders[msgFloor][msgElevID].Cab && !global.Orders[msgFloor][msgElevID].Clear
-
+			
+		case <-remClearTicker.C:
+			for Floor, FloorStates := range global.Orders {
+				clearHandled := true
+				for _, FloorState := range FloorStates {
+					if FloorState.Up || FloorState.Down ||
+						(FloorState.Cab && FloorState.Clear) {
+						clearHandled = false
+					}
+				}
+				if clearHandled {
+					global.Orders[Floor][global.ID].Clear = false
+				}
 			}
-
 		}
 	}
 }

@@ -53,7 +53,6 @@ func ElevatorServer(ch NodeChannels) {
 	floor := <-ch.FloorSensor
 	elevio.SetMotorDirection(MD_Stop)
 	local.Floor = floor
-	ch.LightRefresh <- -1
 	elevio.SetFloorIndicator(floor)
 
 	for {
@@ -68,6 +67,8 @@ func ElevatorServer(ch NodeChannels) {
 					local.State = ES_Stop
 					local.Dir = MD_Stop
 				} else {
+					/*not allowed - race condition occurred
+					triggered by read(node.go:62) and write(node.go:65) operations at the same time*/
 					go setDirection(ch.DoorOpen, queueCopy)
 				}
 			case ES_Run:

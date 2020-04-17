@@ -22,9 +22,7 @@ type NetworkChannels struct {
 	MsgReceiver    chan GlobalInfo
 	PeerUpdate     chan peers.PeerUpdate
 	PeerTxEnable   chan bool
-	//
-	//UpdateClear  chan int
-	UpdateOrders chan GlobalInfo
+	UpdateOrders   chan GlobalInfo
 }
 
 func SyncMessages(ch NetworkChannels, id int) {
@@ -48,10 +46,6 @@ func SyncMessages(ch NetworkChannels, id int) {
 
 		case <-bcastTicker.C:
 			fmt.Println("Broadcasting message")
-			/*
-				sendMsg.Nodes = monitor.Global().Nodes  - nodes
-				sendMsg.Orders = monitor.Global().Orders -orders
-			*/
 			sendMsg := monitor.Global()
 			fmt.Println("Sending:", sendMsg.ID)
 			ch.MsgTransmitter <- sendMsg

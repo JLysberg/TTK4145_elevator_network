@@ -24,11 +24,11 @@ type setGlobalClearBitParams struct {
 }
 
 func clearTimeout(floor int) {
-	params := setGlobalClearBitParams {
+	params := setGlobalClearBitParams{
 		Floor: floor,
 		Value: true,
 	}
-	setGlobalClearBit <- params
+	//setGlobalClearBit <- params
 	timeout := time.NewTimer(config.ClearTimeout)
 	<-timeout.C
 	params.Value = false
@@ -175,6 +175,7 @@ func CostEstimator(updateQueue chan<- []FloorState) {
 					}
 					/*	Assign order to local node if optimal */
 					if bestID == globalCopy.ID && queue[floor] != floorState {
+						fmt.Println("BestID:", bestID)
 						queue[floor] = floorState
 						queueCopy := createQueueCopy(queue)
 						updateQueue <- queueCopy
@@ -194,7 +195,7 @@ func CostEstimator(updateQueue chan<- []FloorState) {
 	as well as incoming network packets. The responsibility of OrderServer is
 	to guarantee that global.Orders is always up to date with the rest of the network */
 func OrderServer(id int, buttonPress <-chan ButtonEvent, newPackets <-chan GlobalInfo,
-	lightRefresh chan<- int, clearOrder <-chan int) {
+	lightRefresh chan<- GlobalInfo, clearOrder <-chan int) {
 	global := GlobalInfo{
 		ID:     id,
 		Nodes:  make([]LocalInfo, config.NElevs),
@@ -204,25 +205,26 @@ func OrderServer(id int, buttonPress <-chan ButtonEvent, newPackets <-chan Globa
 		global.Orders[i] = make([]FloorState, config.NElevs)
 	}
 
-	//timeout := make(chan bool)
-	//go func() { time.Sleep(1 * time.Second); timeout <- true }()
-
 	for {
 		/*	Create copy of global and pass on if there is a receiver available */
 		globalCopy := createGlobalCopy(global)
 		select {
 		case getGlobalCopy <- globalCopy:
 		case pressedButton := <-buttonPress:
-			switch pressedButton.Button {
-			case BT_HallUp:
-				global.Orders[pressedButton.Floor][global.ID].Up = true
-			case BT_HallDown:
-				global.Orders[pressedButton.Floor][global.ID].Down = true
-			case BT_Cab:
-				global.Orders[pressedButton.Floor][global.ID].Cab = true
+			for elevID := range global.Nodes {
+				switch pressedButton.Button {
+				case BT_HallUp:
+					global.Orders[pressedButton.Floor][elevID].Up = true
+				case BT_HallDown:
+					global.Orders[pressedButton.Floor][elevID].Down = true
+				case BT_Cab:
+					global.Orders[pressedButton.Floor][global.ID].Cab = true
+				}
 			}
-			lightRefresh <- pressedButton.Floor
+			lightRefresh <- globalCopy
+
 		case msg := <-newPackets:
+
 			/*	Only update local global.Orders if it differs from msg.Orders */
 			if !equalOrderMatrix(msg.Orders, global.Orders) && msg.ID != global.ID {
 
@@ -239,7 +241,11 @@ func OrderServer(id int, buttonPress <-chan ButtonEvent, newPackets <-chan Globa
 				fmt.Println()
 
 				for msgFloor, msgFloorStates := range msg.Orders {
+					hasOrders := false
 					for msgElevID, msgFloorState := range msgFloorStates {
+						if !hasOrders {
+							hasOrders = msg.Orders[msgFloor][msgElevID].Up || msg.Orders[msgFloor][msgElevID].Down || msg.Orders[msgFloor][msgElevID].Cab
+						}
 						if !msgFloorState.Clear {
 							/*	Concatenate orders from msg into local order matrix */
 							global.Orders[msgFloor][msgElevID].Up =
@@ -258,75 +264,79 @@ func OrderServer(id int, buttonPress <-chan ButtonEvent, newPackets <-chan Globa
 							global.Orders[msgFloor][msgElevID].Cab = false
 						}
 					}
+					if !hasOrders {
+						for msgElevID := range msgFloorStates {
+							global.Orders[msgFloor][msgElevID].Clear = false
+						}
+					}
 				}
-				lightRefresh <- -1
+				lightRefresh <- globalCopy
 			}
 
 		case params := <-setGlobalClearBit:
-			global.Orders[params.Floor][global.ID].Clear = params.Value
+			for elevID := 0; elevID < config.NElevs; elevID++ {
+				global.Orders[params.Floor][elevID].Clear = params.Value
+			}
 
 		case clearFloor := <-clearOrder:
-			/*	Set clear value in global which is removed after 1 second
-				OBS: Techically, this solution may result in read/write conflicts with global*/
-			go clearTimeout(clearFloor)
-			lightRefresh <- clearFloor
+			/*	Set clear value in global which is removed after 1 second */
+
 			/*	The following block might be superfluous when networks are introduced*/
 			/********************************************/
 			/*	Remove all up/down orders if there is a clear present */
 			for elevID := 0; elevID < config.NElevs; elevID++ {
+				global.Orders[clearFloor][elevID].Clear = true
 				global.Orders[clearFloor][elevID].Up = false
 				global.Orders[clearFloor][elevID].Down = false
+
 			}
 			/*	Also remove cab order if present */
 			global.Orders[clearFloor][global.ID].Cab = false
 			/*********************************************/
+			lightRefresh <- globalCopy
+		}
+
+		for msgFloor, msgFloorStates := range global.Orders {
+			for msgElevID := range msgFloorStates {
+				/*	Concatenate orders from msg into local order matrix */
+				global.Orders[msgFloor][msgElevID].Up =
+					global.Orders[msgFloor][msgElevID].Up && !global.Orders[msgFloor][msgElevID].Clear
+				global.Orders[msgFloor][msgElevID].Down =
+					global.Orders[msgFloor][msgElevID].Down && !global.Orders[msgFloor][msgElevID].Clear
+				global.Orders[msgFloor][msgElevID].Cab =
+					global.Orders[msgFloor][msgElevID].Cab && !global.Orders[msgFloor][msgElevID].Clear
+
+			}
+
 		}
 	}
 }
 
-/*
-func createGlobalCopy(global GlobalInfo) GlobalInfo {
-	cpy := global
-	cpy.Orders = global.Orders
-	for i, v := range global.Orders {
-		cpy.Orders[i] = global.Orders[i]
-		for j, k := range v {
-			cpy.Orders[i][j] = k
-		}
-	}
-	return cpy
-}
-*/
 /*	LightServer updates every button light in accordance with the global order
 	matrix on refresh call. A refresh call of -1 updates all buttons, and
 	any specific floor call restricts the iteration to said floor. */
-func LightServer(lightRefresh <-chan int) {
+func LightServer(lightRefresh <-chan GlobalInfo) {
 	for {
 		select {
-		case callingFloor := <-lightRefresh:
+		case globalCopy := <-lightRefresh:
 			/*	Request a copy of global from OrderServer */
-			globalCopy := Global()
+			//globalCopy := Global()
+			//fmt.Println(globalCopy.Orders)
 			for floor, floorStates := range globalCopy.Orders {
 				/*	Skip most of the iteration if callingFloor is specified */
-				if (callingFloor != -1) && (floor != callingFloor) {
-					continue
-				}
-				for elevID, floorState := range floorStates {
-					for button := BT_HallUp; button <= BT_Cab; button++ {
+				for _, floorState := range floorStates {
+					for button := BT_HallUp; button <= BT_HallDown; button++ {
 						lightValue := false
 						switch button {
 						case BT_HallUp:
 							lightValue = floorState.Up
 						case BT_HallDown:
 							lightValue = floorState.Down
-						case BT_Cab:
-							lightValue = floorState.Cab &&
-								elevID == globalCopy.ID
 						}
-						//fmt.Println("Set the lights for " , button, " in floor ", floor , " to ", lightValue)
-
 						elevio.SetButtonLamp(button, floor, lightValue)
+						//fmt.Println("Set the lights for " , button, " in floor ", floor , " to ", lightValue)
 					}
+					elevio.SetButtonLamp(BT_Cab, floor, globalCopy.Orders[floor][globalCopy.ID].Cab)
 				}
 			}
 		}

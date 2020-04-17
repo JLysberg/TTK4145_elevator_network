@@ -63,8 +63,7 @@ func main() {
 		MsgReceiver:    make(chan GlobalInfo),
 		PeerUpdate:     make(chan peers.PeerUpdate),
 		PeerTxEnable:   make(chan bool),
-		//UpdateClear:    make(chan int),
-		UpdateOrders: make(chan GlobalInfo),
+		UpdateOrders:   make(chan GlobalInfo),
 	}
 
 	ch := NodeChannels{
@@ -72,18 +71,16 @@ func main() {
 		UpdateQueue:       make(chan []FloorState),
 		FloorSensor:       make(chan int),
 		ObstructionSwitch: make(chan bool),
-		LightRefresh:      make(chan int),
+		LightRefresh:      make(chan GlobalInfo),
 		ClearOrder:        make(chan int),
 		DoorOpen:          make(chan bool),
 	}
 
-	//go node.Initialize(ch.FloorSensor, ch.LightRefresh)
 	// go node.Printer()
 
 	go monitor.CostEstimator(ch.UpdateQueue)
 	go monitor.OrderServer(ID, ch.ButtonPress, syncCh.UpdateOrders,
 		ch.LightRefresh, ch.ClearOrder)
-	//go sync.SyncMessages(sch.MsgTransmitter, sch.MsgReceiver, sch.PeerUpdate, id)
 	go sync.SyncMessages(syncCh, ID)
 	go monitor.LightServer(ch.LightRefresh)
 

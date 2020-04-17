@@ -59,10 +59,10 @@ var setDirectionInstance = false
 
 func setDirection(doorOpen <-chan bool, queue []FloorState) {
 	/* Ensure only one instance of this thread is running at once */
-	if setDirectionInstance {
+	if setDirectionInstance { //read
 		return
 	}
-	setDirectionInstance = true
+	setDirectionInstance = true //write
 	/*	Get copy of local from ElevatorServer */
 	local := Local()
 	/*	Safety loop to ensure direction is never changed while door is open */
@@ -81,7 +81,7 @@ func setDirection(doorOpen <-chan bool, queue []FloorState) {
 	/*	Calculate, set and save direction to local memory */
 	dir := calculateDirection(local, queue)
 	elevio.SetMotorDirection(dir)
-	
+
 	setLocalDir <- dir
 	setDirectionInstance = false
 }
@@ -91,7 +91,7 @@ func stopCriteria(floor int, local LocalInfo, queue []FloorState) bool {
 	return floorState.Up && local.Dir == MD_Up ||
 		floorState.Down && local.Dir == MD_Down ||
 		(floorState.Down || floorState.Up) &&
-		!orderInFront(local, queue) ||
+			!orderInFront(local, queue) ||
 		floorState.Cab
 }
 

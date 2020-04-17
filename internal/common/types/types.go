@@ -47,7 +47,7 @@ type NodeChannels struct {
 	FloorSensor       chan int
 	ObstructionSwitch chan bool
 	UpdateQueue       chan []FloorState
-	LightRefresh      chan int
+	LightRefresh      chan GlobalInfo
 	ClearOrder        chan int
 	DoorOpen          chan bool
 }

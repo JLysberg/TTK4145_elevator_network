@@ -25,7 +25,7 @@ func Printer() {
 				fmt.Println("*", floorState)
 			}
 		}
-		// fmt.Println("#", monitor.Queue())
+		fmt.Println("#", monitor.Queue())
 		fmt.Println()
 	}
 }

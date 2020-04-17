@@ -49,6 +49,7 @@ type NodeChannels struct {
 	UpdateQueue       chan []FloorState
 	LightRefresh      chan GlobalInfo
 	SetClearBit       chan int
+	ClearQueue		  chan int
 	DoorOpen          chan bool
 }
 

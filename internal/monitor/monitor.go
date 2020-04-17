@@ -90,7 +90,7 @@ func Global() GlobalInfo {
 		Stopped			+1
 		Has passed		+5
 		NOTE: (Has passed includes case of passing order in opposite direction) */
-func CostEstimator(updateQueue chan<- []FloorState) {
+func CostEstimator(updateQueue chan<- []FloorState, clearQueue <-chan int) {
 	queue := make([]FloorState, config.MFloors)
 	for {
 		estBegin := time.Now()
@@ -98,6 +98,11 @@ func CostEstimator(updateQueue chan<- []FloorState) {
 		queueCopy := createQueueCopy(queue)
 		select {
 		case getQueueCopy <- queueCopy:
+		case clearQueueFloor := <-clearQueue:
+			queue[clearQueueFloor].Up = false
+			queue[clearQueueFloor].Down = false
+			queue[clearQueueFloor].Cab = false
+			updateQueue <- createQueueCopy(queue)
 		default:
 		}
 		/*	Request a copy of Global from OrderServer */
@@ -182,7 +187,7 @@ func CostEstimator(updateQueue chan<- []FloorState) {
 	as well as incoming network packets. The responsibility of OrderServer is
 	to guarantee that global.Orders is always up to date with the rest of the network */
 func OrderServer(id int, buttonPress <-chan ButtonEvent, newPackets <-chan GlobalInfo,
-	lightRefresh chan<- GlobalInfo, setClearBit <-chan int) {
+	lightRefresh chan<- GlobalInfo, setClearBit <-chan int, clearQueue chan<- int) {
 	global := GlobalInfo{
 		ID:     id,
 		Nodes:  make([]LocalInfo, config.NElevs),
@@ -200,16 +205,6 @@ func OrderServer(id int, buttonPress <-chan ButtonEvent, newPackets <-chan Globa
 		select {
 		case getGlobalCopy <- createGlobalCopy(global):
 		case pressedButton := <-buttonPress:
-			// for elevID := range global.Nodes {
-			// 	switch pressedButton.Button {
-			// 	case BT_HallUp:
-			// 		global.Orders[pressedButton.Floor][elevID].Up = true
-			// 	case BT_HallDown:
-			// 		global.Orders[pressedButton.Floor][elevID].Down = true
-			// 	case BT_Cab:
-			// 		global.Orders[pressedButton.Floor][global.ID].Cab = true
-			// 	}
-			// }
 			switch pressedButton.Button {
 			case BT_HallUp:
 				global.Orders[pressedButton.Floor][global.ID].Up = true
@@ -272,6 +267,7 @@ func OrderServer(id int, buttonPress <-chan ButtonEvent, newPackets <-chan Globa
 			}
 			go func() {
 				remOrders <- params
+				clearQueue <- clearBitFloor
 			}()
 			
 		case params := <-remOrders:
@@ -311,19 +307,17 @@ func LightServer(lightRefresh <-chan GlobalInfo) {
 		/*	Request copy of global from monitor */
 		case globalCopy := <-lightRefresh:
 			for floor, floorStates := range globalCopy.Orders {
-				for _, floorState := range floorStates {
-					for button := BT_HallUp; button <= BT_HallDown; button++ {
-						lightValue := false
-						switch button {
-						case BT_HallUp:
-							lightValue = floorState.Up
-						case BT_HallDown:
-							lightValue = floorState.Down
-						}
-						elevio.SetButtonLamp(button, floor, lightValue)
+				for button := BT_HallUp; button <= BT_HallDown; button++ {
+					lightValue := false
+					switch button {
+					case BT_HallUp:
+						lightValue = floorStates[globalCopy.ID].Up
+					case BT_HallDown:
+						lightValue = floorStates[globalCopy.ID].Down
 					}
-					elevio.SetButtonLamp(BT_Cab, floor, globalCopy.Orders[floor][globalCopy.ID].Cab)
+					elevio.SetButtonLamp(button, floor, lightValue)
 				}
+				elevio.SetButtonLamp(BT_Cab, floor, globalCopy.Orders[floor][globalCopy.ID].Cab)
 			}
 		}
 	}

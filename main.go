@@ -55,6 +55,7 @@ func main() {
 		PeerUpdate:     make(chan peers.PeerUpdate),
 		PeerTxEnable:   make(chan bool),
 		UpdateOrders:   make(chan GlobalInfo),
+		OnlineElevators: make(chan []bool),
 	}
 
 	ch := NodeChannels{
@@ -71,7 +72,7 @@ func main() {
 
 	// go node.Printer()
 
-	go monitor.CostEstimator(ch.UpdateQueue, ch.ClearQueue)
+	go monitor.CostEstimator(ch.UpdateQueue, ch.ClearQueue, syncCh.OnlineElevators)
 	go monitor.OrderServer(ID, ch.ButtonPress, syncCh.UpdateOrders,
 		ch.LightRefresh, ch.SetClearBit, ch.ClearQueue, ch.UpdateLocal)
 	go sync.SyncMessages(syncCh, ID)

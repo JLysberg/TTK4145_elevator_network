@@ -357,11 +357,13 @@ func LightServer(lightRefresh <-chan GlobalInfo) {
 			for floor, floorStates := range globalCopy.Orders {
 				for button := BT_HallUp; button <= BT_HallDown; button++ {
 					lightValue := false
-					switch button {
-					case BT_HallUp:
-						lightValue = floorStates[globalCopy.ID].Up
-					case BT_HallDown:
-						lightValue = floorStates[globalCopy.ID].Down
+					for id := 0; id < config.NElevs; id++ {
+						switch button {
+						case BT_HallUp:
+							lightValue = lightValue || floorStates[id].Up
+						case BT_HallDown:
+							lightValue = lightValue || floorStates[id].Down
+						}
 					}
 					elevio.SetButtonLamp(button, floor, lightValue)
 				}

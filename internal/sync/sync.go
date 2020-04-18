@@ -45,9 +45,9 @@ func SyncMessages(ch NetworkChannels, id int) {
 		//update onlineList?
 
 		case <-bcastTicker.C:
-			fmt.Println("Broadcasting message")
+			// fmt.Println("Broadcasting message")
 			sendMsg := monitor.Global()
-			fmt.Println("Sending:", sendMsg.ID)
+			// fmt.Println("Sending:", sendMsg.ID)
 			ch.MsgTransmitter <- sendMsg
 
 		case p := <-ch.PeerUpdate:

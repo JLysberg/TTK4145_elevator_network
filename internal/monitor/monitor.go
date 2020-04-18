@@ -1,7 +1,7 @@
 package monitor
 
 import (
-	// "fmt"
+	"fmt"
 	"math"
 	"time"
 
@@ -43,6 +43,7 @@ func createGlobalCopy(global GlobalInfo) GlobalInfo {
 	for i, v := range global.Nodes {
 		copy.Nodes[i] = v
 	}
+	
 	return copy
 }
 
@@ -53,6 +54,19 @@ func equalOrderMatrix(m1 [][]FloorState, m2 [][]FloorState) bool {
 				if m2[i][j] != k {
 					return false
 				}
+			}
+		}
+	} else {
+		return false
+	}
+	return true
+}
+
+func equalNodeArray(a1 []LocalInfo, a2 []LocalInfo) bool {
+	if len(a1) == len(a2) {
+		for i, v := range a1 {
+			if a2[i] != v {
+				return false
 			}
 		}
 	} else {
@@ -127,10 +141,10 @@ func CostEstimator(updateQueue chan<- []FloorState, clearQueue <-chan int) {
 						updateQueue <- createQueueCopy(queue)
 					}
 				} else if floorState.Up || floorState.Down {
-					bestCost := int(math.Inf(1))
+					bestCost := 100
 					bestID := 0
-					cost := 0
 					for nodeID, node := range globalCopy.Nodes {
+						cost := 0
 						/*	Ignore all offline nodes */
 						// if !Local.OnlineList[nodeID] {
 						// 	continue
@@ -141,25 +155,31 @@ func CostEstimator(updateQueue chan<- []FloorState, clearQueue <-chan int) {
 						if floorDiff != 0 {
 							cost += floorDiff + 1
 						}
+						fmt.Print("ID: ", nodeID, "\tDist: ", cost, " \tState: ")
 
 						/*	Calculate state cost */
 						switch node.Dir {
 						case MD_Down:
 							if floorDiff >= 0 && floorState.Down {
 								break
+								fmt.Print("0")
 							} else {
 								cost += 5
+								fmt.Print("5")
 							}
 						case MD_Up:
 							if floorDiff <= 0 && floorState.Up {
 								break
+								fmt.Print("0")
 							} else {
 								cost += 5
+								fmt.Print("5")
 							}
 						case MD_Stop:
 							cost++
+							fmt.Print("1")
 						}
-
+						fmt.Println("\t=", cost)
 						if cost < bestCost {
 							bestCost = cost
 							bestID = nodeID
@@ -167,11 +187,13 @@ func CostEstimator(updateQueue chan<- []FloorState, clearQueue <-chan int) {
 					}
 					/*	Assign order to local node if optimal */
 					if bestID == globalCopy.ID && queue[floor] != floorState {
-						// fmt.Println("BestID:", bestID)
+						
 						queue[floor] = floorState
 						queueCopy := createQueueCopy(queue)
 						updateQueue <- queueCopy
 					}
+					fmt.Print("F: ", floor, " fS: ", floorState,
+							"\tBestCost: ", bestCost, "\tAssigned to ID: ", bestID, "\n")
 				}
 			}
 		}
@@ -187,7 +209,8 @@ func CostEstimator(updateQueue chan<- []FloorState, clearQueue <-chan int) {
 	as well as incoming network packets. The responsibility of OrderServer is
 	to guarantee that global.Orders is always up to date with the rest of the network */
 func OrderServer(id int, buttonPress <-chan ButtonEvent, newPackets <-chan GlobalInfo,
-	lightRefresh chan<- GlobalInfo, setClearBit <-chan int, clearQueue chan<- int) {
+	lightRefresh chan<- GlobalInfo, setClearBit <-chan int, clearQueue chan<- int,
+	updateLocal <-chan LocalInfo) {
 	global := GlobalInfo{
 		ID:     id,
 		Nodes:  make([]LocalInfo, config.NElevs),
@@ -201,8 +224,11 @@ func OrderServer(id int, buttonPress <-chan ButtonEvent, newPackets <-chan Globa
 	remClearTicker := time.NewTicker(1000 * time.Millisecond)
 
 	for {
-		/*	Create copy of global and pass on if there is a receiver available */
 		select {
+		/*	Request copy of local from ElevatorServer and update entry in global */
+		case localCopy := <-updateLocal:
+			global.Nodes[global.ID] = localCopy
+		/*	Create copy of global and pass on if there is a receiver available */
 		case getGlobalCopy <- createGlobalCopy(global):
 		case pressedButton := <-buttonPress:
 			switch pressedButton.Button {
@@ -216,6 +242,10 @@ func OrderServer(id int, buttonPress <-chan ButtonEvent, newPackets <-chan Globa
 			lightRefresh <- createGlobalCopy(global)
 
 		case msg := <-newPackets:
+			/*	Only update local global.Nodes if it differs from msg.Orders */
+			if msg.Nodes[msg.ID] !=  global.Nodes[msg.ID] && msg.ID != global.ID {
+				global.Nodes[msg.ID] = msg.Nodes[msg.ID]
+			}
 
 			/*	Only update local global.Orders if it differs from msg.Orders */
 			if !equalOrderMatrix(msg.Orders, global.Orders) && msg.ID != global.ID {

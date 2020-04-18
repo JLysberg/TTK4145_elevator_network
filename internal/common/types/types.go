@@ -51,6 +51,7 @@ type NodeChannels struct {
 	SetClearBit       chan int
 	ClearQueue		  chan int
 	DoorOpen          chan bool
+	UpdateLocal       chan LocalInfo
 }
 
 type LocalInfo struct {

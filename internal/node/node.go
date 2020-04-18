@@ -25,7 +25,7 @@ func Printer() {
 				fmt.Println("*", floorState)
 			}
 		}
-		fmt.Println("#", monitor.Queue())
+		// fmt.Println("#", monitor.Queue())
 		fmt.Println()
 	}
 }
@@ -111,5 +111,6 @@ func ElevatorServer(ch NodeChannels) {
 
 		case getLocalCopy <- local:
 		}
+		ch.UpdateLocal <- local
 	}
 }

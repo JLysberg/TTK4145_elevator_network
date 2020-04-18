@@ -66,13 +66,14 @@ func main() {
 		SetClearBit:       make(chan int),
 		ClearQueue:        make(chan int),
 		DoorOpen:          make(chan bool),
+		UpdateLocal:		   make(chan LocalInfo),
 	}
 
 	// go node.Printer()
 
 	go monitor.CostEstimator(ch.UpdateQueue, ch.ClearQueue)
 	go monitor.OrderServer(ID, ch.ButtonPress, syncCh.UpdateOrders,
-		ch.LightRefresh, ch.SetClearBit, ch.ClearQueue)
+		ch.LightRefresh, ch.SetClearBit, ch.ClearQueue, ch.UpdateLocal)
 	go sync.SyncMessages(syncCh, ID)
 	go monitor.LightServer(ch.LightRefresh)
 

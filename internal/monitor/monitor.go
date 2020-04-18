@@ -104,13 +104,19 @@ func Global() GlobalInfo {
 		Stopped			+1
 		Has passed		+5
 		NOTE: (Has passed includes case of passing order in opposite direction) */
-func CostEstimator(updateQueue chan<- []FloorState, clearQueue <-chan int) {
-	queue := make([]FloorState, config.MFloors)
+func CostEstimator(updateQueue chan<- []FloorState, clearQueue <-chan int, onlineElevators <-chan []bool) {
+	var (
+		queue = make([]FloorState, config.MFloors)
+		onlineList []bool
+	)
 	for {
 		estBegin := time.Now()
 		/*	Create copy of queue and pass on if there is a receiver available */
 		queueCopy := createQueueCopy(queue)
 		select {
+
+		case copyOnlineList := <-onlineElevators:
+			onlineList = copyOnlineList
 		case getQueueCopy <- queueCopy:
 		case clearQueueFloor := <-clearQueue:
 			queue[clearQueueFloor].Up = false
@@ -146,9 +152,9 @@ func CostEstimator(updateQueue chan<- []FloorState, clearQueue <-chan int) {
 					for nodeID, node := range globalCopy.Nodes {
 						cost := 0
 						/*	Ignore all offline nodes */
-						// if !Local.OnlineList[nodeID] {
-						// 	continue
-						// }
+						if onlineList[nodeID] {
+						 	continue
+						}
 
 						/*	Calculate distance cost */
 						floorDiff := int(math.Abs(float64(node.Floor - floor)))

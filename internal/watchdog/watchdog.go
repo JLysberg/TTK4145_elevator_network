@@ -15,27 +15,21 @@ import (
 
 
 //Take use of the functions in network/peers! 
-func UpdateElevLastSent(newPackets chan packetReceiver){
+/*func UpdateElevLastSent(newPackets chan packetReceiver){
 	select{
 		case packet := <- newPackets
 				types.NodeInfo.ElevLastSent[msg.LocalID] = time.Now()
 			}
 		}
 	}
-}
+}*/
 
 func UpdateOnlineList(newPackets chan packetReceiver){
 	for {
 		for i := 0; i < config.NElevs; i++{
 			if (time.Now() - types.NodeInfo.ElevLastSent[i]) < 3 * time.Second(){
 				types.NodeInfo.OnlineList[i] = 1
-				if(types.NodeInfo.State - )
-					types.NodeInfo,OnlineList[i] = 
-
-					monitor.Node.State
-				}
-			}
-			else{
+			} else {
 				types.NodeInfo.OnlineList[i] = 0
 			}
 		}

@@ -14,8 +14,13 @@ import (
 	"../../pkg/network/localip"
 	"../../pkg/network/peers"
 	. "../common/types"
+	"../common/config"
 	"../monitor"
 	)
+
+/*func OnlineList() []bool {
+	return <-getQueueCopy
+}*/
 
 type NetworkChannels struct {
 	MsgTransmitter chan GlobalInfo
@@ -23,14 +28,16 @@ type NetworkChannels struct {
 	PeerUpdate     chan peers.PeerUpdate
 	PeerTxEnable   chan bool
 	UpdateOrders   chan GlobalInfo
+	OnlineElevators chan []bool
 }
 
 func SyncMessages(ch NetworkChannels, id int) {
 	var (
-	//sendMsg GlobalInfo
-	//nodes 		[config.NElevs]
-	//orders		[config.MFloors][config.NElevs]
+//		lostID 		 int
+//		newID		 int
+		//ElevLastSent [config.NElevs]int
 	)
+	onlineList := make([]bool, config.NElevs)
 
 	bcastTicker := time.NewTicker(500 * time.Millisecond)
 	//bcastTicker := time.NewTicker(2 * time.Second)
@@ -40,9 +47,6 @@ func SyncMessages(ch NetworkChannels, id int) {
 
 		case getMsg := <-ch.MsgReceiver:
 			ch.UpdateOrders <- getMsg
-
-		//update ElevLastSent?
-		//update onlineList?
 
 		case <-bcastTicker.C:
 			// fmt.Println("Broadcasting message")
@@ -56,6 +60,7 @@ func SyncMessages(ch NetworkChannels, id int) {
 			fmt.Printf("  New:      %q\n", p.New)
 			fmt.Printf("  Lost:     %q\n", p.Lost)
 
+			fmt.Println(len(p.New))
 			localid := strconv.Itoa(id)
 			if localid == "" {
 				localIP, err := localip.LocalIP()
@@ -66,7 +71,16 @@ func SyncMessages(ch NetworkChannels, id int) {
 				localid = fmt.Sprintf("peer-%s-%d", localIP, os.Getpid())
 			}
 
+			if len(p.New) > 0 {
+				newID, _ := strconv.Atoi(p.New)
+				onlineList[newID] = true
+			} else if len(p.Lost) > 0 {
+				lostID, _ := strconv.Atoi(p.Lost[0])
+				onlineList[lostID] = false
+			}
+			fmt.Println("onlineList: ", onlineList)
+			tmpList := onlineList
+			ch.OnlineElevators <- tmpList 
 		}
 	}
-
 }

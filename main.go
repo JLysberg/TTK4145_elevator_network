@@ -68,7 +68,7 @@ func main() {
 		DoorOpen:          make(chan bool),
 	}
 
-	go node.Printer()
+	// go node.Printer()
 
 	go monitor.CostEstimator(ch.UpdateQueue, ch.ClearQueue)
 	go monitor.OrderServer(ID, ch.ButtonPress, syncCh.UpdateOrders,

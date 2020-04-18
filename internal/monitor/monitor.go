@@ -1,7 +1,7 @@
 package monitor
 
 import (
-	"fmt"
+	// "fmt"
 	"math"
 	"time"
 
@@ -167,7 +167,7 @@ func CostEstimator(updateQueue chan<- []FloorState, clearQueue <-chan int) {
 					}
 					/*	Assign order to local node if optimal */
 					if bestID == globalCopy.ID && queue[floor] != floorState {
-						fmt.Println("BestID:", bestID)
+						// fmt.Println("BestID:", bestID)
 						queue[floor] = floorState
 						queueCopy := createQueueCopy(queue)
 						updateQueue <- queueCopy
@@ -220,17 +220,17 @@ func OrderServer(id int, buttonPress <-chan ButtonEvent, newPackets <-chan Globa
 			/*	Only update local global.Orders if it differs from msg.Orders */
 			if !equalOrderMatrix(msg.Orders, global.Orders) && msg.ID != global.ID {
 
-				fmt.Println("Got a network order")
-				fmt.Println("LocalOrders, id:", id)
-				for i, _ := range global.Orders {
-					fmt.Println("F", i, "Elev:", msg.ID, global.Orders[i][msg.ID], "Elev:", global.ID, global.Orders[i][global.ID])
-				}
-				fmt.Println("Hi from id:", msg.ID, " - Order matrix from network")
-				for i, _ := range global.Orders {
-					fmt.Println("F", i,
-						"Elev:", msg.ID, msg.Orders[i][msg.ID], "Elev:", global.ID, msg.Orders[i][global.ID])
-				}
-				fmt.Println()
+				// fmt.Println("Local, id:", id)
+				// for i, _ := range global.Orders {
+				// 	fmt.Println("F", i, "Elev:", msg.ID, global.Orders[i][msg.ID],
+				// 		"Elev:", global.ID, global.Orders[i][global.ID])
+				// }
+				// fmt.Println("Network, id:", msg.ID)
+				// for i, _ := range global.Orders {
+				// 	fmt.Println("F", i, "Elev:", msg.ID, msg.Orders[i][msg.ID], 
+				// 		"Elev:", global.ID, msg.Orders[i][global.ID])
+				// }
+				// fmt.Println()
 
 				for msgFloor, msgFloorStates := range msg.Orders {
 					for msgElevID, msgFloorState := range msgFloorStates {
@@ -243,6 +243,8 @@ func OrderServer(id int, buttonPress <-chan ButtonEvent, newPackets <-chan Globa
 							global.Orders[msgFloor][msgElevID].Cab =
 								global.Orders[msgFloor][msgElevID].Cab || msgFloorState.Cab
 						} else {
+							global.Orders[msgFloor][msgElevID].Clear =
+								global.Orders[msgFloor][msgElevID].Clear || msgFloorState.Clear
 							/*	Remove orders on msgFloor */
 							params := remOrdersParams {
 								Floor: msgFloor,
@@ -269,6 +271,7 @@ func OrderServer(id int, buttonPress <-chan ButtonEvent, newPackets <-chan Globa
 				remOrders <- params
 				clearQueue <- clearBitFloor
 			}()
+			// setClearLatest = time.Now()
 			
 		case params := <-remOrders:
 			/*	Remove all up/down orders on specified floor */
@@ -284,15 +287,19 @@ func OrderServer(id int, buttonPress <-chan ButtonEvent, newPackets <-chan Globa
 			
 		case <-remClearTicker.C:
 			for Floor, FloorStates := range global.Orders {
-				clearHandled := true
-				for _, FloorState := range FloorStates {
-					if FloorState.Up || FloorState.Down ||
-						(FloorState.Cab && FloorState.Clear) {
-						clearHandled = false
+				for ElevID1, FloorState1 := range FloorStates {
+					if FloorState1.Clear {
+						clearHandled := true
+						for ElevID2, FloorState2 := range FloorStates {
+							if FloorState2.Up || FloorState2.Down ||
+								(FloorState2.Cab && ElevID1 == ElevID2) {
+								clearHandled = false
+							}
+						}
+						if clearHandled {
+							global.Orders[Floor][ElevID1].Clear = false
+						}
 					}
-				}
-				if clearHandled {
-					global.Orders[Floor][global.ID].Clear = false
 				}
 			}
 		}

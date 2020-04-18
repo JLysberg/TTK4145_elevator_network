@@ -158,27 +158,38 @@ func CostEstimator(updateQueue chan<- []FloorState, clearQueue <-chan int) {
 						fmt.Print("ID: ", nodeID, "\tDist: ", cost, " \tState: ")
 
 						/*	Calculate state cost */
-						switch node.Dir {
-						case MD_Down:
-							if floorDiff >= 0 && floorState.Down {
-								break
-								fmt.Print("0")
-							} else {
-								cost += 5
-								fmt.Print("5")
-							}
-						case MD_Up:
-							if floorDiff <= 0 && floorState.Up {
-								break
-								fmt.Print("0")
-							} else {
-								cost += 5
-								fmt.Print("5")
-							}
-						case MD_Stop:
+						/*	bugfix todo: If elevator is moving up towards a down
+							order with no orders in front, cost is incremented by 5.
+							Should ideally be 0 */
+						switch node.State {
+						case ES_Run, ES_Stop:
+							switch node.LastDir {
+								case MD_Down:
+									if node.Floor >= floor && floorState.Down {
+										fmt.Print("0")
+										break
+									} else {
+										cost += 5
+										fmt.Print("5")
+									}
+								case MD_Up:
+									if node.Floor <= floor && floorState.Up {
+										fmt.Print("0")
+										break
+									} else {
+										cost += 5
+										fmt.Print("5")
+									}
+								default:
+									fmt.Println("ERROR: unhandled node.LastDir case")
+								}
+						case ES_Idle:
 							cost++
 							fmt.Print("1")
+						default:
+							fmt.Println("ERROR: unhandled node.State case")
 						}
+
 						fmt.Println("\t=", cost)
 						if cost < bestCost {
 							bestCost = cost

@@ -7,7 +7,7 @@ import (
 const (
 	UpdateRate = 500 * time.Millisecond
 
-	ClearTimeout = 1 * time.Second
+	ClearTimeout = 1000 * time.Millisecond
 	DoorTimeout  = 3 * time.Second
 
 	MFloors = 4

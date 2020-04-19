@@ -256,13 +256,13 @@ func OrderServer(id int, buttonPress <-chan ButtonEvent, newPackets <-chan Globa
 			lightRefresh <- createGlobalCopy(global)
 
 		case msg := <-newPackets:
-			/*	Only update local global.Nodes if it differs from msg.Orders */
-			if msg.Nodes[msg.ID] !=  global.Nodes[msg.ID] && msg.ID != global.ID {
+			/*	Only update local global.Nodes if it differs from msg.Nodes */
+			if msg.Nodes[msg.ID] !=  global.Nodes[msg.ID] {
 				global.Nodes[msg.ID] = msg.Nodes[msg.ID]
 			}
 
 			/*	Only update local global.Orders if it differs from msg.Orders */
-			if !equalOrderMatrix(msg.Orders, global.Orders) && msg.ID != global.ID {
+			if !equalOrderMatrix(msg.Orders, global.Orders){
 
 				// fmt.Println("Local, id:", id)
 				// for i, _ := range global.Orders {

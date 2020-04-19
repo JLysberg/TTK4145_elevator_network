@@ -59,9 +59,6 @@ type LocalInfo struct {
 	Dir     MotorDirection
 	LastDir MotorDirection
 	Floor   int
-	// Queue        [config.MFloors]FloorState
-	// OnlineList   [config.NElevs]bool
-	// ElevLastSent [config.NElevs]int
 }
 
 type GlobalInfo struct {

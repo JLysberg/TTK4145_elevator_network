@@ -7,7 +7,6 @@ import (
 	"reflect"
 	"strings"
 
-	//"github.com/JLysberg/TTK4145_elevator_network/pkg/network/conn"
 	"../conn"
 )
 

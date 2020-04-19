@@ -6,7 +6,6 @@ import (
 	"sync"
 	"time"
 
-	// . "github.com/JLysberg/TTK4145_elevator_network/internal/common/types"
 	. "../../internal/common/types"
 )
 

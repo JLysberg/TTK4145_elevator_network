@@ -3,32 +3,11 @@ package node
 import (
 	"fmt"
 	"time"
-
-	// "fmt"
-
-	// "github.com/JLysberg/TTK4145_elevator_network/internal/common/config"
-	// . "github.com/JLysberg/TTK4145_elevator_network/internal/common/types"
-	// "github.com/JLysberg/TTK4145_elevator_network/internal/monitor"
-	// "github.com/JLysberg/TTK4145_elevator_network/pkg/elevio"
 	
 	"../common/config"
 	. "../common/types"
-	"../monitor"
-	"../../pkg/elevio")
-
-func Printer() {
-	for {
-		time.Sleep(1 * time.Second)
-
-		for _, floorStates := range monitor.Global().Orders {
-			for _, floorState := range floorStates {
-				fmt.Println("*", floorState)
-			}
-		}
-		// fmt.Println("#", monitor.Queue())
-		fmt.Println()
-	}
-}
+	"../../pkg/elevio"
+)
 
 /*	Local gives a call to ElevatorServer to return a copy of local */
 func Local() LocalInfo {

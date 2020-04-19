@@ -1,10 +1,6 @@
 package types
 
-/* LAB setup */
-// "../config"
-
-/* Setup desc. in main */
-//"github.com/JLysberg/TTK4145_elevator_network/internal/common/config"
+import "../../../pkg/network/peers"
 
 type MotorDirection int
 
@@ -41,6 +37,15 @@ type FloorState struct {
 	Down  bool
 	Cab   bool
 	Clear bool
+}
+
+type NetworkChannels struct {
+	MsgTransmitter chan GlobalInfo
+	MsgReceiver    chan GlobalInfo
+	PeerUpdate     chan peers.PeerUpdate
+	PeerTxEnable   chan bool
+	UpdateOrders   chan GlobalInfo
+	OnlineElevators chan []bool
 }
 
 type NodeChannels struct {

@@ -1,18 +1,13 @@
 package node
 
 import (
-	// "fmt"
 	"sync"
-
-	// "github.com/JLysberg/TTK4145_elevator_network/internal/common/config"
-	// . "github.com/JLysberg/TTK4145_elevator_network/internal/common/types"
-	// "github.com/JLysberg/TTK4145_elevator_network/internal/monitor"
-	// "github.com/JLysberg/TTK4145_elevator_network/pkg/elevio"
 	
 	"../common/config"
 	. "../common/types"
 	"../monitor"
-	"../../pkg/elevio")
+	"../../pkg/elevio"
+)
 
 var getLocalCopy = make(chan LocalInfo)
 var setLocalDir = make(chan MotorDirection)

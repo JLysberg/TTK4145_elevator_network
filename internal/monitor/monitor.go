@@ -4,76 +4,11 @@ import (
 	"fmt"
 	"math"
 	"time"
-
-	// "github.com/JLysberg/TTK4145_elevator_network/internal/common/config"
-	// . "github.com/JLysberg/TTK4145_elevator_network/internal/common/types"
-	// "github.com/JLysberg/TTK4145_elevator_network/pkg/elevio"
 	
 	"../common/config"
 	. "../common/types"
-	"../../pkg/elevio")
-
-var getQueueCopy = make(chan []FloorState)
-var getGlobalCopy = make(chan GlobalInfo)
-var remOrders = make(chan remOrdersParams)
-
-type remOrdersParams struct {
-	Floor int
-	ID    int
-}
-
-func createQueueCopy(queue []FloorState) []FloorState {
-	copy := make([]FloorState, len(queue))
-	for i, k := range queue {
-		copy[i] = k
-	}
-	return copy
-}
-
-func createGlobalCopy(global GlobalInfo) GlobalInfo {
-	copy := global
-	copy.Orders = make([][]FloorState, len(global.Orders))
-	copy.Nodes = make([]LocalInfo, len(global.Nodes))
-	for i, v := range global.Orders {
-		copy.Orders[i] = make([]FloorState, len(v))
-		for j, k := range v {
-			copy.Orders[i][j] = k
-		}
-	}
-	for i, v := range global.Nodes {
-		copy.Nodes[i] = v
-	}
-	
-	return copy
-}
-
-func equalOrderMatrix(m1 [][]FloorState, m2 [][]FloorState) bool {
-	if len(m1) == len(m2) && len(m1[0]) == len(m2[0]) {
-		for i, v := range m1 {
-			for j, k := range v {
-				if m2[i][j] != k {
-					return false
-				}
-			}
-		}
-	} else {
-		return false
-	}
-	return true
-}
-
-func equalNodeArray(a1 []LocalInfo, a2 []LocalInfo) bool {
-	if len(a1) == len(a2) {
-		for i, v := range a1 {
-			if a2[i] != v {
-				return false
-			}
-		}
-	} else {
-		return false
-	}
-	return true
-}
+	"../../pkg/elevio"
+)
 
 /*	Queue gives a call to CostEstimator to return a copy of queue */
 func Queue() []FloorState {
@@ -260,22 +195,8 @@ func OrderServer(id int, buttonPress <-chan ButtonEvent, newPackets <-chan Globa
 			if msg.Nodes[msg.ID] !=  global.Nodes[msg.ID] && msg.ID != global.ID {
 				global.Nodes[msg.ID] = msg.Nodes[msg.ID]
 			}
-
 			/*	Only update local global.Orders if it differs from msg.Orders */
 			if !equalOrderMatrix(msg.Orders, global.Orders) && msg.ID != global.ID {
-
-				// fmt.Println("Local, id:", id)
-				// for i, _ := range global.Orders {
-				// 	fmt.Println("F", i, "Elev:", msg.ID, global.Orders[i][msg.ID],
-				// 		"Elev:", global.ID, global.Orders[i][global.ID])
-				// }
-				// fmt.Println("Network, id:", msg.ID)
-				// for i, _ := range global.Orders {
-				// 	fmt.Println("F", i, "Elev:", msg.ID, msg.Orders[i][msg.ID], 
-				// 		"Elev:", global.ID, msg.Orders[i][global.ID])
-				// }
-				// fmt.Println()
-
 				for msgFloor, msgFloorStates := range msg.Orders {
 					for msgElevID, msgFloorState := range msgFloorStates {
 						if !msgFloorState.Clear {
@@ -315,7 +236,6 @@ func OrderServer(id int, buttonPress <-chan ButtonEvent, newPackets <-chan Globa
 				remOrders <- params
 				clearQueue <- clearBitFloor
 			}()
-			// setClearLatest = time.Now()
 			
 		case params := <-remOrders:
 			/*	Remove all up/down orders on specified floor */

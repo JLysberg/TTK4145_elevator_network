@@ -3,25 +3,10 @@ package main
 import (
 	"flag"
 	"strconv"
-
-	//"time"
-	//"fmt"
-	//"os"
-
-	// "github.com/JLysberg/TTK4145_elevator_network/internal/common/config"
-	// . "github.com/JLysberg/TTK4145_elevator_network/internal/common/types"
-	// "github.com/JLysberg/TTK4145_elevator_network/internal/monitor"
-	// "github.com/JLysberg/TTK4145_elevator_network/internal/node"
-	// "github.com/JLysberg/TTK4145_elevator_network/internal/sync"
-	// "github.com/JLysberg/TTK4145_elevator_network/pkg/elevio"
-	// "github.com/JLysberg/TTK4145_elevator_network/pkg/network/peers"
-	// "github.com/JLysberg/TTK4145_elevator_network/pkg/network/bcast"
 	
 	"./internal/common/config"
 	. "./internal/common/types"
 	"./internal/node"
-
-
 	"./internal/monitor"
 	"./internal/sync"
 	"./pkg/elevio"
@@ -42,14 +27,7 @@ func main() {
 
 	elevio.Init("localhost:"+port, config.MFloors)
 
-	// 10.100.23.149
-	// 10.100.23.174
-	//test_network_1: .223 and .247
-
-	//go run main.go --port=15658 -id=1
-	//Simulator: qwe(UP) - sdf (DOWN) - zxc (CAB)
-
-	syncCh := sync.NetworkChannels{
+	syncCh := NetworkChannels{
 		MsgTransmitter: make(chan GlobalInfo),
 		MsgReceiver:    make(chan GlobalInfo),
 		PeerUpdate:     make(chan peers.PeerUpdate),
@@ -69,8 +47,6 @@ func main() {
 		DoorOpen:          make(chan bool),
 		UpdateLocal:		   make(chan LocalInfo),
 	}
-
-	// go node.Printer()
 
 	go monitor.CostEstimator(ch.UpdateQueue, ch.ClearQueue, syncCh.OnlineElevators)
 	go monitor.OrderServer(ID, ch.ButtonPress, syncCh.UpdateOrders,

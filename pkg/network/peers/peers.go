@@ -6,7 +6,6 @@ import (
 	"sort"
 	"time"
 
-	//"github.com/JLysberg/TTK4145_elevator_network/pkg/network/conn"
 	"../conn"
 )
 

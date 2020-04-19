@@ -151,8 +151,8 @@ func CostEstimator(updateQueue chan<- []FloorState, clearQueue <-chan int, onlin
 					bestID := 0
 					for nodeID, node := range globalCopy.Nodes {
 						cost := 0
-						/*	Ignore all offline nodes */
-						if !onlineList[nodeID] {
+						/*	Ignore all offline and malfunctioned nodes */
+						if !onlineList[nodeID] || node.State == ES_Error {
 						 	continue
 						}
 

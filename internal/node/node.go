@@ -42,27 +42,32 @@ var doorTimeout = time.NewTimer(1 * time.Hour)
 func ElevatorServer(ch NodeChannels) {
 	/*	Declare local variables */
 	local := LocalInfo{
-		State:   ES_Idle,
+		State:   ES_Stop,
 		Dir:     MD_Stop,
 		LastDir: MD_Down,
 	}
 	var queueCopy []FloorState
-	/*	Initialize */
-	elevio.SetMotorDirection(MD_Down)
-	floor := <-ch.FloorSensor
-	elevio.SetMotorDirection(MD_Stop)
-	local.Floor = floor
-	elevio.SetFloorIndicator(floor)
+	watchdog := time.NewTimer(10 * time.Second)
+	/*	Initialize to known state */
+	go elevio.SetMotorDirection(MD_Down)
+	arrivedFloor := <-ch.FloorSensor
+	go elevio.SetMotorDirection(MD_Stop)
+	go elevio.SetFloorIndicator(arrivedFloor)
+	local.Floor = arrivedFloor
+	floorStop(arrivedFloor, ch.SetClearBit)
+	/*	Initialize monitor */
 	ch.UpdateLocal <- local
 
 	for {
+		watchdog.Reset(10 * time.Second)
 		select {
+		case getLocalCopy <- local:
 		case queueCopy = <-ch.UpdateQueue:
 			switch local.State {
 			case ES_Stop, ES_Idle:
-				if queueCopy[local.Floor].Up ||
-					queueCopy[local.Floor].Down ||
-					queueCopy[local.Floor].Cab {
+				if queueCopy[local.Floor].Up || 
+				   queueCopy[local.Floor].Down ||
+				   queueCopy[local.Floor].Cab {
 					floorStop(local.Floor, ch.SetClearBit)
 					local.State = ES_Stop
 					local.Dir = MD_Stop
@@ -83,15 +88,7 @@ func ElevatorServer(ch NodeChannels) {
 				go setDirection(ch.DoorOpen, queueCopy)
 			}
 
-		case <-doorTimeout.C:
-			elevio.SetDoorOpenLamp(false)
-			ch.DoorOpen <- true
-			if !orderAvailable(queueCopy) {
-				local.State = ES_Idle
-			} else {
-				local.State = ES_Run
-			}
-
+			
 		case switchEnabled := <-ch.ObstructionSwitch:
 			if local.State == ES_Stop {
 				if switchEnabled {
@@ -108,7 +105,28 @@ func ElevatorServer(ch NodeChannels) {
 				local.State = ES_Run
 			}
 
-		case getLocalCopy <- local:
+		case <-doorTimeout.C:
+			elevio.SetDoorOpenLamp(false)
+			ch.DoorOpen <- true
+			if !orderAvailable(queueCopy) {
+				local.State = ES_Idle
+			} else {
+				local.State = ES_Run
+			}
+		
+		case <-watchdog.C:
+			if local.State == ES_Run {
+				fmt.Println("Error: No node activity")
+				/*	Set elevator in error state */
+				local.State = ES_Error
+				ch.UpdateLocal <- local
+				/*	Reset elevator if activity is resumed */
+				arrivedFloor := <-ch.FloorSensor
+				floorStop(arrivedFloor, ch.SetClearBit)
+				local.State = ES_Stop
+				local.Dir = MD_Stop
+				go setDirection(ch.DoorOpen, queueCopy)
+			}
 		}
 		ch.UpdateLocal <- local
 	}

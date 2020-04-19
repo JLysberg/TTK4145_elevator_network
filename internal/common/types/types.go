@@ -33,6 +33,7 @@ const (
 	ES_Idle ElevatorState = 0
 	ES_Run                = 1
 	ES_Stop               = 2
+	ES_Error			  = 3
 )
 
 type FloorState struct {
@@ -59,9 +60,6 @@ type LocalInfo struct {
 	Dir     MotorDirection
 	LastDir MotorDirection
 	Floor   int
-	// Queue        [config.MFloors]FloorState
-	// OnlineList   [config.NElevs]bool
-	// ElevLastSent [config.NElevs]int
 }
 
 type GlobalInfo struct {

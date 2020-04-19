@@ -42,7 +42,7 @@ var doorTimeout = time.NewTimer(1 * time.Hour)
 func ElevatorServer(ch NodeChannels) {
 	/*	Declare local variables */
 	local := LocalInfo{
-		State:   ES_Stop,
+		State:   ES_Idle,
 		Dir:     MD_Stop,
 		LastDir: MD_Down,
 	}
@@ -53,8 +53,8 @@ func ElevatorServer(ch NodeChannels) {
 	arrivedFloor := <-ch.FloorSensor
 	go elevio.SetMotorDirection(MD_Stop)
 	go elevio.SetFloorIndicator(arrivedFloor)
+	go elevio.SetDoorOpenLamp(false)
 	local.Floor = arrivedFloor
-	floorStop(arrivedFloor, ch.SetClearBit)
 	/*	Initialize monitor */
 	ch.UpdateLocal <- local
 

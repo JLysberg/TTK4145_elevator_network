@@ -152,7 +152,7 @@ func CostEstimator(updateQueue chan<- []FloorState, clearQueue <-chan int, onlin
 					for nodeID, node := range globalCopy.Nodes {
 						cost := 0
 						/*	Ignore all offline nodes */
-						if onlineList[nodeID] {
+						if !onlineList[nodeID] {
 						 	continue
 						}
 
@@ -164,14 +164,11 @@ func CostEstimator(updateQueue chan<- []FloorState, clearQueue <-chan int, onlin
 						fmt.Print("ID: ", nodeID, "\tDist: ", cost, " \tState: ")
 
 						/*	Calculate state cost */
-						/*	bugfix todo: If elevator is moving up towards a down
-							order with no orders in front, cost is incremented by 5.
-							Should ideally be 0 */
 						switch node.State {
 						case ES_Run, ES_Stop:
 							switch node.LastDir {
 								case MD_Down:
-									if node.Floor >= floor && floorState.Down {
+									if node.Floor >= floor {
 										fmt.Print("0")
 										break
 									} else {
@@ -179,7 +176,7 @@ func CostEstimator(updateQueue chan<- []FloorState, clearQueue <-chan int, onlin
 										fmt.Print("5")
 									}
 								case MD_Up:
-									if node.Floor <= floor && floorState.Up {
+									if node.Floor <= floor {
 										fmt.Print("0")
 										break
 									} else {
@@ -224,7 +221,7 @@ func CostEstimator(updateQueue chan<- []FloorState, clearQueue <-chan int, onlin
 
 /*	OrderServer handles all incoming orders. This includes all new local orders
 	as well as incoming network packets. The responsibility of OrderServer is
-	to guarantee that global.Orders is always up to date with the rest of the network */
+	to guarantee that global is always up to date with the rest of the network */
 func OrderServer(id int, buttonPress <-chan ButtonEvent, newPackets <-chan GlobalInfo,
 	lightRefresh chan<- GlobalInfo, setClearBit <-chan int, clearQueue chan<- int,
 	updateLocal <-chan LocalInfo) {
@@ -333,6 +330,8 @@ func OrderServer(id int, buttonPress <-chan ButtonEvent, newPackets <-chan Globa
 			lightRefresh <- createGlobalCopy(global)
 			
 		case <-remClearTicker.C:
+			/*	Check global.Orders for clear bits. Remove clear bit if it has
+				been handled by all elevators on the network */
 			for Floor, FloorStates := range global.Orders {
 				for ElevID1, FloorState1 := range FloorStates {
 					if FloorState1.Clear {

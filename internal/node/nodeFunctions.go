@@ -55,7 +55,7 @@ var (
 	setDirectionInstanceMx sync.Mutex
 )
 
-func setDirection(doorOpen <-chan bool, queue []FloorState) {
+func setDirection(doorClose <-chan bool, queue []FloorState) {
 	/* Ensure only one instance of this thread is running at once */
 	setDirectionInstanceMx.Lock()
 	start := !setDirectionInstance
@@ -70,7 +70,7 @@ func setDirection(doorOpen <-chan bool, queue []FloorState) {
 			safety:
 				for {
 					select {
-					case <-doorOpen:
+					case <-doorClose:
 						/*	Update local and queue in case of change */
 						local = Local()
 						queue = monitor.Queue()
@@ -81,7 +81,6 @@ func setDirection(doorOpen <-chan bool, queue []FloorState) {
 			/*	Calculate, set and save direction to local memory */
 			dir := calculateDirection(local, queue)
 			elevio.SetMotorDirection(dir)
-
 			setLocalDir <- dir
 
 			setDirectionInstanceMx.Lock()

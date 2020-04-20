@@ -44,13 +44,12 @@ func main() {
 		LightRefresh:      make(chan GlobalInfo),
 		SetClearBit:       make(chan int),
 		ClearQueue:        make(chan int),
-		DoorOpen:          make(chan bool),
-		UpdateLocal:		   make(chan LocalInfo),
+		DoorClose:          make(chan bool),
+		UpdateLocal:       make(chan LocalInfo),
 	}
 
 	go monitor.CostEstimator(ch.UpdateQueue, ch.ClearQueue, syncCh.OnlineElevators)
-	go monitor.OrderServer(ID, ch.ButtonPress, syncCh.UpdateOrders,
-		ch.LightRefresh, ch.SetClearBit, ch.ClearQueue, ch.UpdateLocal)
+	go monitor.OrderServer(ID, syncCh.UpdateOrders, ch)
 	go sync.SyncMessages(syncCh, ID)
 	go monitor.LightServer(ch.LightRefresh)
 

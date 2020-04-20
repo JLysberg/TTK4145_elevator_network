@@ -35,29 +35,30 @@ func Global() GlobalInfo {
 		M 				+(M + 1)
 
 		State			Cost
-		Will pass		+0
+		Moving toward	+0
 		Stopped			+1
-		Has passed		+5
-		NOTE: (Has passed includes case of passing order in opposite direction) */
+		Moving away		+5	*/
 func CostEstimator(updateQueue chan<- []FloorState, clearQueue <-chan int, onlineElevators <-chan []bool) {
+	/*	Declare local variables */
 	var (
 		queue = make([]FloorState, config.MFloors)
 		onlineList []bool
 	)
 	for {
 		estBegin := time.Now()
-		/*	Create copy of queue and pass on if there is a receiver available */
-		queueCopy := createQueueCopy(queue)
 		select {
-
+		/*	Create copy of queue and pass on if there is a receiver available */
+		case getQueueCopy <- createQueueCopy(queue):
+		/*	Aqcuire new copy of OnlineList from Sync if one is available */
 		case copyOnlineList := <-onlineElevators:
 			onlineList = copyOnlineList
-		case getQueueCopy <- queueCopy:
+
 		case clearQueueFloor := <-clearQueue:
 			queue[clearQueueFloor].Up = false
 			queue[clearQueueFloor].Down = false
 			queue[clearQueueFloor].Cab = false
 			updateQueue <- createQueueCopy(queue)
+
 		default:
 		}
 		/*	Request a copy of Global from OrderServer */
@@ -70,9 +71,10 @@ func CostEstimator(updateQueue chan<- []FloorState, clearQueue <-chan int, onlin
 				updateQueue <- createQueueCopy(queue)
 			}
 		}
-		/*	Cost calculation for non-cab orders */
+		/*	Iterate through order matrix for all order and clearbit information */
 		for floor, floorStates := range globalCopy.Orders {
 			for elevID, floorState := range floorStates {
+				/*	Remove orders from queue if clearbit is found */
 				if floorState.Clear {
 					if elevID == globalCopy.ID &&
 						(queue[floor].Up || queue[floor].Down || queue[floor].Cab) {
@@ -81,6 +83,7 @@ func CostEstimator(updateQueue chan<- []FloorState, clearQueue <-chan int, onlin
 						queue[floor].Cab = false
 						updateQueue <- createQueueCopy(queue)
 					}
+				/*	Begin cost calculation if hall order is found */
 				} else if floorState.Up || floorState.Down {
 					bestCost := 100
 					bestID := 0
@@ -90,13 +93,11 @@ func CostEstimator(updateQueue chan<- []FloorState, clearQueue <-chan int, onlin
 						if !onlineList[nodeID] || node.State == ES_Error {
 						 	continue
 						}
-
 						/*	Calculate distance cost */
 						floorDiff := int(math.Abs(float64(node.Floor - floor)))
 						if floorDiff != 0 {
 							cost += floorDiff + 1
 						}
-
 						/*	Calculate state cost */
 						switch node.State {
 						case ES_Run, ES_Stop:
@@ -107,17 +108,21 @@ func CostEstimator(updateQueue chan<- []FloorState, clearQueue <-chan int, onlin
 									} else {
 										cost += 5
 									}
+
 								case MD_Up:
 									if node.Floor <= floor {
 										break
 									} else {
 										cost += 5
 									}
+
 								default:
 									fmt.Println("ERROR: unhandled node.LastDir case")
 								}
+
 						case ES_Idle:
-							cost++
+							cost++¨
+
 						default:
 							fmt.Println("ERROR: unhandled node.State case")
 						}
@@ -129,10 +134,8 @@ func CostEstimator(updateQueue chan<- []FloorState, clearQueue <-chan int, onlin
 					}
 					/*	Assign order to local node if optimal */
 					if bestCost == 100 || (bestID == globalCopy.ID && queue[floor] != floorState) {
-						
 						queue[floor] = floorState
-						queueCopy := createQueueCopy(queue)
-						updateQueue <- queueCopy
+						updateQueue <- createQueueCopy(queue)
 					}
 				}
 			}
@@ -148,9 +151,8 @@ func CostEstimator(updateQueue chan<- []FloorState, clearQueue <-chan int, onlin
 /*	OrderServer handles all incoming orders. This includes all new local orders
 	as well as incoming network packets. The responsibility of OrderServer is
 	to guarantee that global is always up to date with the rest of the network */
-func OrderServer(id int, buttonPress <-chan ButtonEvent, orderUpdates <-chan GlobalInfo,
-	lightRefresh chan<- GlobalInfo, setClearBit <-chan int, clearQueue chan<- int,
-	updateLocal <-chan LocalInfo) {
+func OrderServer(id int, updateOrders <-chan GlobalInfo, ch NodeChannels) {
+	/*	Declare and initialize local variables */
 	global := GlobalInfo{
 		ID:     id,
 		Nodes:  make([]LocalInfo, config.NElevs),
@@ -166,11 +168,12 @@ func OrderServer(id int, buttonPress <-chan ButtonEvent, orderUpdates <-chan Glo
 	for {
 		select {
 		/*	Request copy of local from ElevatorServer and update entry in global */
-		case localCopy := <-updateLocal:
+		case localCopy := <-ch.UpdateLocal:
 			global.Nodes[global.ID] = localCopy
 		/*	Create copy of global and pass on if there is a receiver available */
 		case getGlobalCopy <- createGlobalCopy(global):
-		case pressedButton := <-buttonPress:
+
+		case pressedButton := <-ch.ButtonPress:
 			switch pressedButton.Button {
 			case BT_HallUp:
 				global.Orders[pressedButton.Floor][global.ID].Up = true
@@ -179,9 +182,9 @@ func OrderServer(id int, buttonPress <-chan ButtonEvent, orderUpdates <-chan Glo
 			case BT_Cab:
 				global.Orders[pressedButton.Floor][global.ID].Cab = true
 			}
-			lightRefresh <- createGlobalCopy(global)
+			ch.LightRefresh <- createGlobalCopy(global)
 
-		case msg := <-orderUpdates:
+		case msg := <-updateOrders:
 			/*	Only update local global.Nodes if it differs from msg.Orders */
 			if msg.Nodes[msg.ID] !=  global.Nodes[msg.ID] && msg.ID != global.ID {
 				global.Nodes[msg.ID] = msg.Nodes[msg.ID]
@@ -212,10 +215,10 @@ func OrderServer(id int, buttonPress <-chan ButtonEvent, orderUpdates <-chan Glo
 						}
 					}
 				}
-				lightRefresh <- createGlobalCopy(global)
+				ch.LightRefresh <- createGlobalCopy(global)
 			}
 
-		case clearBitFloor := <-setClearBit:
+		case clearBitFloor := <-ch.SetClearBit:
 			/*	Set clear bit in global */
 			global.Orders[clearBitFloor][global.ID].Clear = true
 			/*	Remove orders on clearBitFloor */
@@ -225,7 +228,7 @@ func OrderServer(id int, buttonPress <-chan ButtonEvent, orderUpdates <-chan Glo
 			}
 			go func() {
 				remOrders <- params
-				clearQueue <- clearBitFloor
+				ch.ClearQueue <- clearBitFloor
 			}()
 			
 		case params := <-remOrders:
@@ -238,7 +241,7 @@ func OrderServer(id int, buttonPress <-chan ButtonEvent, orderUpdates <-chan Glo
 			/*	Also remove cab order on specified floor, only for specified ID */
 			global.Orders[params.Floor][params.ID].Cab = false
 
-			lightRefresh <- createGlobalCopy(global)
+			ch.LightRefresh <- createGlobalCopy(global)
 			
 		case <-remClearTicker.C:
 			/*	Check global.Orders for clear bits. Remove clear bit if it has

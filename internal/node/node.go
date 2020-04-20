@@ -44,7 +44,7 @@ func ElevatorServer(ch NodeChannels) {
 		case queueCopy = <-ch.UpdateQueue:
 			switch local.State {
 			case ES_Stop, ES_Idle:
-				/* Check for orders in queue */
+				/* Check for orders in queueCopy */
 				if queueCopy[local.Floor].Up || 
 				   queueCopy[local.Floor].Down ||
 				   queueCopy[local.Floor].Cab {
@@ -52,10 +52,10 @@ func ElevatorServer(ch NodeChannels) {
 					local.State = ES_Stop
 					local.Dir = MD_Stop
 				} else {
-					go setDirection(ch.DoorOpen, queueCopy)
+					go setDirection(ch.DoorClose, queueCopy)
 				}
 			case ES_Run:
-				go setDirection(ch.DoorOpen, queueCopy)
+				go setDirection(ch.DoorClose, queueCopy)
 			}
 
 		case arrivedFloor := <-ch.FloorSensor:
@@ -66,7 +66,7 @@ func ElevatorServer(ch NodeChannels) {
 				floorStop(arrivedFloor, ch.SetClearBit)
 				local.State = ES_Stop
 				local.Dir = MD_Stop
-				go setDirection(ch.DoorOpen, queueCopy)
+				go setDirection(ch.DoorClose, queueCopy)
 			}
 
 			
@@ -88,7 +88,7 @@ func ElevatorServer(ch NodeChannels) {
 
 		case <-doorTimeout.C:
 			elevio.SetDoorOpenLamp(false)
-			ch.DoorOpen <- true
+			ch.DoorClose <- true
 			if !orderAvailable(queueCopy) {
 				local.State = ES_Idle
 			} else {
@@ -107,7 +107,7 @@ func ElevatorServer(ch NodeChannels) {
 				floorStop(arrivedFloor, ch.SetClearBit)
 				local.State = ES_Stop
 				local.Dir = MD_Stop
-				go setDirection(ch.DoorOpen, queueCopy)
+				go setDirection(ch.DoorClose, queueCopy)
 			}
 		}
 		ch.UpdateLocal <- local

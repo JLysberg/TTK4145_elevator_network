@@ -56,7 +56,7 @@ type NodeChannels struct {
 	LightRefresh      chan GlobalInfo
 	SetClearBit       chan int
 	ClearQueue		  chan int
-	DoorOpen          chan bool
+	DoorClose          chan bool
 	UpdateLocal       chan LocalInfo
 }
 

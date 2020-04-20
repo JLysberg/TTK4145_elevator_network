@@ -12,6 +12,7 @@ import (
 	"../monitor"
 )
 
+/* Syncmessages handles all network communication and peer information */
 func SyncMessages(ch NetworkChannels, id int) {
 	onlineList := make([]bool, config.NElevs)
 	bcastTicker := time.NewTicker(500 * time.Millisecond)
@@ -19,20 +20,22 @@ func SyncMessages(ch NetworkChannels, id int) {
 	for {
 		select {
 
-		case getMsg := <-ch.MsgReceiver:
-			ch.UpdateOrders <- getMsg
+		/* Receive messages from the network */
+		case msg := <-ch.MsgReceiver:
+			ch.UpdateOrders <- msg
 
+		/* Broadcast messages to the network */
 		case <-bcastTicker.C:
 			sendMsg := monitor.Global()
 			ch.MsgTransmitter <- sendMsg
-
+		
+		/* Update information about peers in the network */
 		case p := <-ch.PeerUpdate:
 			fmt.Printf("Peer update:\n")
 			fmt.Printf("  Peers:    %q\n", p.Peers)
 			fmt.Printf("  New:      %q\n", p.New)
 			fmt.Printf("  Lost:     %q\n", p.Lost)
 
-			fmt.Println(len(p.New))
 			localid := strconv.Itoa(id)
 			if localid == "" {
 				localIP, err := localip.LocalIP()
@@ -43,6 +46,7 @@ func SyncMessages(ch NetworkChannels, id int) {
 				localid = fmt.Sprintf("peer-%s-%d", localIP, os.Getpid())
 			}
 
+			/* Update onlineList */
 			if len(p.New) > 0 {
 				newID, _ := strconv.Atoi(p.New)
 				onlineList[newID] = true

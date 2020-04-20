@@ -96,7 +96,6 @@ func CostEstimator(updateQueue chan<- []FloorState, clearQueue <-chan int, onlin
 						if floorDiff != 0 {
 							cost += floorDiff + 1
 						}
-						fmt.Print("ID: ", nodeID, "\tDist: ", cost, " \tState: ")
 
 						/*	Calculate state cost */
 						switch node.State {
@@ -104,45 +103,37 @@ func CostEstimator(updateQueue chan<- []FloorState, clearQueue <-chan int, onlin
 							switch node.LastDir {
 								case MD_Down:
 									if node.Floor >= floor {
-										fmt.Print("0")
 										break
 									} else {
 										cost += 5
-										fmt.Print("5")
 									}
 								case MD_Up:
 									if node.Floor <= floor {
-										fmt.Print("0")
 										break
 									} else {
 										cost += 5
-										fmt.Print("5")
 									}
 								default:
 									fmt.Println("ERROR: unhandled node.LastDir case")
 								}
 						case ES_Idle:
 							cost++
-							fmt.Print("1")
 						default:
 							fmt.Println("ERROR: unhandled node.State case")
 						}
 
-						fmt.Println("\t=", cost)
 						if cost < bestCost {
 							bestCost = cost
 							bestID = nodeID
 						}
 					}
 					/*	Assign order to local node if optimal */
-					if bestID == globalCopy.ID && queue[floor] != floorState {
+					if bestCost == 100 || (bestID == globalCopy.ID && queue[floor] != floorState) {
 						
 						queue[floor] = floorState
 						queueCopy := createQueueCopy(queue)
 						updateQueue <- queueCopy
 					}
-					fmt.Print("F: ", floor, " fS: ", floorState,
-							"\tBestCost: ", bestCost, "\tAssigned to ID: ", bestID, "\n")
 				}
 			}
 		}
@@ -157,7 +148,7 @@ func CostEstimator(updateQueue chan<- []FloorState, clearQueue <-chan int, onlin
 /*	OrderServer handles all incoming orders. This includes all new local orders
 	as well as incoming network packets. The responsibility of OrderServer is
 	to guarantee that global is always up to date with the rest of the network */
-func OrderServer(id int, buttonPress <-chan ButtonEvent, newPackets <-chan GlobalInfo,
+func OrderServer(id int, buttonPress <-chan ButtonEvent, orderUpdates <-chan GlobalInfo,
 	lightRefresh chan<- GlobalInfo, setClearBit <-chan int, clearQueue chan<- int,
 	updateLocal <-chan LocalInfo) {
 	global := GlobalInfo{
@@ -190,7 +181,7 @@ func OrderServer(id int, buttonPress <-chan ButtonEvent, newPackets <-chan Globa
 			}
 			lightRefresh <- createGlobalCopy(global)
 
-		case msg := <-newPackets:
+		case msg := <-orderUpdates:
 			/*	Only update local global.Nodes if it differs from msg.Orders */
 			if msg.Nodes[msg.ID] !=  global.Nodes[msg.ID] && msg.ID != global.ID {
 				global.Nodes[msg.ID] = msg.Nodes[msg.ID]
@@ -252,18 +243,18 @@ func OrderServer(id int, buttonPress <-chan ButtonEvent, newPackets <-chan Globa
 		case <-remClearTicker.C:
 			/*	Check global.Orders for clear bits. Remove clear bit if it has
 				been handled by all elevators on the network */
-			for Floor, FloorStates := range global.Orders {
-				for ElevID1, FloorState1 := range FloorStates {
-					if FloorState1.Clear {
+			for floor, floorStates := range global.Orders {
+				for elevID1, floorState1 := range floorStates {
+					if floorState1.Clear {
 						clearHandled := true
-						for ElevID2, FloorState2 := range FloorStates {
-							if FloorState2.Up || FloorState2.Down ||
-								(FloorState2.Cab && ElevID1 == ElevID2) {
+						for elevID2, floorState2 := range floorStates {
+							if floorState2.Up || floorState2.Down ||
+								(floorState2.Cab && elevID1 == elevID2) {
 								clearHandled = false
 							}
 						}
 						if clearHandled {
-							global.Orders[Floor][ElevID1].Clear = false
+							global.Orders[floor][elevID1].Clear = false
 						}
 					}
 				}
@@ -282,12 +273,12 @@ func LightServer(lightRefresh <-chan GlobalInfo) {
 			for floor, floorStates := range globalCopy.Orders {
 				for button := BT_HallUp; button <= BT_HallDown; button++ {
 					lightValue := false
-					for id := 0; id < config.NElevs; id++ {
+					for elevID := 0; elevID < config.NElevs; elevID++ {
 						switch button {
 						case BT_HallUp:
-							lightValue = lightValue || floorStates[id].Up
+							lightValue = lightValue || floorStates[elevID].Up
 						case BT_HallDown:
-							lightValue = lightValue || floorStates[id].Down
+							lightValue = lightValue || floorStates[elevID].Down
 						}
 					}
 					elevio.SetButtonLamp(button, floor, lightValue)

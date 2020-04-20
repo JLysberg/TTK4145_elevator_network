@@ -44,6 +44,7 @@ func ElevatorServer(ch NodeChannels) {
 		case queueCopy = <-ch.UpdateQueue:
 			switch local.State {
 			case ES_Stop, ES_Idle:
+				/* Check for orders in queue */
 				if queueCopy[local.Floor].Up || 
 				   queueCopy[local.Floor].Down ||
 				   queueCopy[local.Floor].Cab {
@@ -60,6 +61,7 @@ func ElevatorServer(ch NodeChannels) {
 		case arrivedFloor := <-ch.FloorSensor:
 			go elevio.SetFloorIndicator(arrivedFloor)
 			local.Floor = arrivedFloor
+			/* Stop the elevator if there is an order at arrivedFloor */
 			if stopCriteria(arrivedFloor, local, queueCopy) {
 				floorStop(arrivedFloor, ch.SetClearBit)
 				local.State = ES_Stop
@@ -101,6 +103,7 @@ func ElevatorServer(ch NodeChannels) {
 				ch.UpdateLocal <- local
 				/*	Reset elevator if activity is resumed */
 				arrivedFloor := <-ch.FloorSensor
+				go elevio.SetFloorIndicator(arrivedFloor)
 				floorStop(arrivedFloor, ch.SetClearBit)
 				local.State = ES_Stop
 				local.Dir = MD_Stop
